@@ -290,8 +290,8 @@
   // Default candidate position for index i of n total (evenly spaced, snapped to valid half-integers)
   function defaultCandPos(i, n) {
     const raw = (i + 1) / (n + 1) * 100;
-    // Snap to nearest valid position (0.5, 2.5, ..., 99.5)
-    const snapped = Math.round((raw - 0.5) / 2) * 2 + 0.5;
+    // Snap to nearest valid position (0.5, 1.5, 2.5, ..., 99.5)
+    const snapped = Math.floor(raw) + 0.5;
     return Math.max(0.5, Math.min(99.5, snapped));
   }
 
@@ -316,7 +316,7 @@
       row.className = 'cand-row';
       row.innerHTML = `
         <label>${label}</label>
-        <input type="range" id="c${i}-pos" min="0.5" max="99.5" step="2" value="${pos}">
+        <input type="range" id="c${i}-pos" min="0.5" max="99.5" step="1" value="${pos}">
         <span class="val" id="c${i}-pos-val">${pos}</span>`;
       container.appendChild(row);
       const slider = row.querySelector('input');
@@ -601,9 +601,14 @@
     if (!rankings.length) { container.innerHTML = ''; return; }
 
     const { quota, totalVotes, steps, elected } = runSTV(rankings, seats);
+    const initialBallots = rankings.map(r => ({ ranking: r.ranking, weight: r.count }));
     let html = `<p><strong>Total votes:</strong> ${totalVotes} &nbsp;|&nbsp;
                    <strong>Droop quota:</strong> ${quota} &nbsp;|&nbsp;
-                   <strong>Seats:</strong> ${seats}</p>`;
+                   <strong>Seats:</strong> ${seats}</p>
+               <div class="stv-round">
+                 <h3>Initial ballots</h3>
+                 <div class="stv-tables">${ballotTableHTML(initialBallots)}</div>
+               </div>`;
 
     steps.forEach((step, i) => {
       let desc = '';
