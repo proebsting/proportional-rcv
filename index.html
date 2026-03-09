@@ -156,6 +156,10 @@
     .stv-table td:first-child { text-align: left; }
     .stv-table tr.quota-met td { font-weight: bold; }
     .stv-summary { margin-top: 12px; font-weight: bold; }
+    .stv-progression th, .stv-progression td { white-space: nowrap; }
+    .stv-progression th.prog-elect { background: #e8f5e9; color: #1a5c1a; border-left: 2px solid #a5d6a7; }
+    .stv-progression th.prog-elim  { background: #ffebee; color: #7f0000; border-left: 2px solid #ef9a9a; }
+    .stv-progression td { border-left: 1px solid #eee; }
   </style>
 </head>
 <body>
@@ -512,10 +516,22 @@
       if (active.size <= seats - elected.length) {
         const t = tally();
         for (const c of [...active]) {
-          steps.push({ type: 'elect_remaining', candidate: c, tally: t,
-                       ballots: snapshotBallots(ballots, active) });
-          elected.push(c);
+          // Capture per-ballot: ballots whose effective top is c are consumed
+          const perBallot = ballots.map(b => {
+            const effectiveTop = b.prefs.find(cc => active.has(cc));
+            const isTop = effectiveTop === c;
+            return { used: isTop ? b.weight : 0, after: isTop ? 0 : b.weight };
+          });
+          // Consume those ballot weights
+          ballots.forEach((b, i) => { b.weight = perBallot[i].after; });
           active.delete(c);
+          elected.push(c);
+          const perBallotFinal = perBallot.map((p, i) => ({
+            ...p,
+            rankingAfter: ballots[i].prefs.filter(cc => active.has(cc)).join(' > ') || '—',
+          }));
+          steps.push({ type: 'elect_remaining', candidate: c, tally: t,
+                       ballots: snapshotBallots(ballots, active), perBallot: perBallotFinal });
         }
         break;
       }
@@ -530,25 +546,39 @@
         const surplus = votes - quota;
         const fraction = votes > 0 ? surplus / votes : 0;
 
+        // Capture per-ballot data BEFORE modifying weights or active
+        const perBallot = ballots.map(b => {
+          const effectiveTop = b.prefs.find(c => active.has(c));
+          const isTop = effectiveTop === winner;
+          return { used: isTop ? b.weight * (1 - fraction) : 0,
+                   after: isTop ? b.weight * fraction : b.weight };
+        });
+
         elected.push(winner);
         active.delete(winner);
 
-        // Fractional surplus transfer: ballots that had winner as effective top
-        // get their weight multiplied by the transfer fraction
+        // Fractional surplus transfer
         for (const b of ballots) {
           const top = b.prefs.find(c => c === winner || active.has(c));
           if (top === winner) b.weight *= fraction;
         }
 
+        const perBallotFinal = perBallot.map((p, i) => ({
+          ...p,
+          rankingAfter: ballots[i].prefs.filter(c => active.has(c)).join(' > ') || '—',
+        }));
         steps.push({ type: 'elect', candidate: winner, votes, surplus, fraction,
-                     tally: t, ballots: snapshotBallots(ballots, active) });
+                     tally: t, ballots: snapshotBallots(ballots, active), perBallot: perBallotFinal });
       } else {
         // Eliminate the candidate with fewest votes (ties broken alphabetically)
         const [loser, votes] = Object.entries(t)
           .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))[0];
         active.delete(loser);
+        const perBallot = ballots.map(b => ({
+          rankingAfter: b.prefs.filter(c => active.has(c)).join(' > ') || '—',
+        }));
         steps.push({ type: 'eliminate', candidate: loser, votes,
-                     tally: t, ballots: snapshotBallots(ballots, active) });
+                     tally: t, ballots: snapshotBallots(ballots, active), perBallot });
       }
     }
 
@@ -596,18 +626,53 @@
     </table>`;
   }
 
+  function buildProgressionTable(rankings, steps) {
+    // Header row 1: group headers per step
+    let hdr1 = `<th rowspan="2">Ranking</th><th rowspan="2">Voters</th>`;
+    let hdr2 = '';
+    steps.forEach((step, i) => {
+      const rn = i + 1;
+      if (step.type === 'eliminate') {
+        hdr1 += `<th colspan="1" class="prog-elim">Round ${rn}: ✗ ${step.candidate} elim.</th>`;
+        hdr2 += `<th class="prog-elim">New ranking</th>`;
+      } else {
+        const lbl = step.type === 'elect_remaining' ? `✓ ${step.candidate} (auto)` : `✓ ${step.candidate} elected`;
+        hdr1 += `<th colspan="3" class="prog-elect">Round ${rn}: ${lbl}</th>`;
+        hdr2 += `<th class="prog-elect">Used</th><th class="prog-elect">Remaining</th><th class="prog-elect">New ranking</th>`;
+      }
+    });
+
+    const rows = rankings.map((r, i) => {
+      let cells = `<td>${r.ranking}</td><td>${fmt(r.count)}</td>`;
+      steps.forEach(step => {
+        const pb = step.perBallot[i];
+        if (step.type === 'eliminate') {
+          cells += `<td>${pb.rankingAfter}</td>`;
+        } else {
+          cells += `<td>${fmt(pb.used)}</td><td>${fmt(pb.after)}</td><td>${pb.rankingAfter}</td>`;
+        }
+      });
+      return `<tr>${cells}</tr>`;
+    }).join('');
+
+    return `<div style="overflow-x:auto">
+      <table class="stv-table stv-progression">
+        <thead><tr>${hdr1}</tr><tr>${hdr2}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+
   function drawSTV(rankings, seats) {
     const container = document.getElementById('stv-results');
     if (!rankings.length) { container.innerHTML = ''; return; }
 
     const { quota, totalVotes, steps, elected } = runSTV(rankings, seats);
-    const initialBallots = rankings.map(r => ({ ranking: r.ranking, weight: r.count }));
     let html = `<p><strong>Total votes:</strong> ${totalVotes} &nbsp;|&nbsp;
                    <strong>Droop quota:</strong> ${quota} &nbsp;|&nbsp;
                    <strong>Seats:</strong> ${seats}</p>
                <div class="stv-round">
-                 <h3>Initial ballots</h3>
-                 <div class="stv-tables">${ballotTableHTML(initialBallots)}</div>
+                 <h3>Ballot progression</h3>
+                 ${buildProgressionTable(rankings, steps)}
                </div>`;
 
     steps.forEach((step, i) => {
