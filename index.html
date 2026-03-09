@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>STV Demonstration</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #222;
+    }
+    h1 { font-size: 1.4em; margin-bottom: 24px; }
+    h2 { font-size: 1.05em; margin: 24px 0 12px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+    .param-grid {
+      display: grid;
+      grid-template-columns: 200px 1fr 60px;
+      align-items: center;
+      gap: 8px 12px;
+    }
+    .param-grid label { font-size: 0.9em; }
+    .param-grid input[type=range] { width: 100%; }
+    .param-grid .val { font-size: 0.9em; text-align: right; font-variant-numeric: tabular-nums; }
+    .section { margin-bottom: 20px; }
+    .candidates-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .candidate-block { display: flex; flex-direction: column; gap: 4px; }
+    .candidate-block label { font-size: 0.85em; font-weight: bold; }
+    .candidate-block .subrow {
+      display: grid;
+      grid-template-columns: 1fr 50px;
+      align-items: center;
+      gap: 6px;
+    }
+    .candidate-block .subrow span { font-size: 0.85em; text-align: right; font-variant-numeric: tabular-nums; }
+    .seats-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .seats-row label { font-size: 0.9em; min-width: 160px; }
+    .seats-row input[type=range] { width: 200px; }
+    .seats-row .val { font-size: 0.9em; font-variant-numeric: tabular-nums; }
+    #voter-table-wrap {
+      margin-top: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    #voter-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85em;
+      font-variant-numeric: tabular-nums;
+    }
+    #voter-table thead th {
+      position: sticky;
+      top: 0;
+      background: #f5f5f5;
+      border-bottom: 2px solid #ccc;
+      padding: 6px 12px;
+      text-align: right;
+    }
+    #voter-table thead th:first-child { text-align: center; }
+    #voter-table tbody td {
+      padding: 3px 12px;
+      text-align: right;
+      border-bottom: 1px solid #eee;
+    }
+    #voter-table tbody td:first-child { text-align: center; color: #555; }
+    #voter-table tfoot td {
+      padding: 5px 12px;
+      text-align: right;
+      font-weight: bold;
+      border-top: 2px solid #ccc;
+      background: #f9f9f9;
+    }
+    #voter-table tfoot td:first-child { text-align: center; }
+    #rankings-table-wrap {
+      margin-top: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    #rankings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85em;
+      font-variant-numeric: tabular-nums;
+    }
+    #rankings-table thead th {
+      background: #f5f5f5;
+      border-bottom: 2px solid #ccc;
+      padding: 6px 12px;
+      text-align: left;
+    }
+    #rankings-table thead th:last-child { text-align: right; }
+    #rankings-table tbody td {
+      padding: 3px 12px;
+      border-bottom: 1px solid #eee;
+    }
+    #rankings-table tbody td:last-child { text-align: right; }
+    #rankings-table tfoot td {
+      padding: 5px 12px;
+      font-weight: bold;
+      border-top: 2px solid #ccc;
+      background: #f9f9f9;
+    }
+    #rankings-table tfoot td:last-child { text-align: right; }
+    #histogram { display: block; width: 100%; }
+    #stv-results { font-size: 0.88em; }
+    .stv-round { margin-bottom: 20px; }
+    .stv-round h3 { font-size: 1em; margin: 0 0 6px; }
+    .stv-elected   { color: #1a7a1a; }
+    .stv-eliminated { color: #b00; }
+    .stv-tables { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+    .stv-table {
+      border-collapse: collapse;
+      font-size: 0.9em;
+      font-variant-numeric: tabular-nums;
+    }
+    .stv-table caption {
+      text-align: left;
+      font-weight: bold;
+      font-size: 0.85em;
+      color: #555;
+      margin-bottom: 2px;
+    }
+    .stv-table th {
+      background: #f5f5f5;
+      border-bottom: 2px solid #ccc;
+      padding: 4px 10px;
+      text-align: right;
+    }
+    .stv-table th:first-child { text-align: left; }
+    .stv-table td {
+      padding: 2px 10px;
+      border-bottom: 1px solid #eee;
+      text-align: right;
+    }
+    .stv-table td:first-child { text-align: left; }
+    .stv-table tr.quota-met td { font-weight: bold; }
+    .stv-summary { margin-top: 12px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>STV (Single Transferable Vote) Demonstration</h1>
+
+<div class="section">
+  <h2>Voter Distribution 1</h2>
+  <div class="param-grid">
+    <label>Mean</label>
+    <input type="range" id="d1-mean" min="1" max="100" step="1" value="30">
+    <span class="val" id="d1-mean-val">30</span>
+
+    <label>Std Dev</label>
+    <input type="range" id="d1-sd" min="1" max="40" step="1" value="12">
+    <span class="val" id="d1-sd-val">12</span>
+
+    <label>Voters</label>
+    <input type="range" id="d1-n" min="100" max="5000" step="100" value="1000">
+    <span class="val" id="d1-n-val">1000</span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Voter Distribution 2</h2>
+  <div class="param-grid">
+    <label>Mean</label>
+    <input type="range" id="d2-mean" min="1" max="100" step="1" value="70">
+    <span class="val" id="d2-mean-val">70</span>
+
+    <label>Std Dev</label>
+    <input type="range" id="d2-sd" min="1" max="40" step="1" value="12">
+    <span class="val" id="d2-sd-val">12</span>
+
+    <label>Voters</label>
+    <input type="range" id="d2-n" min="100" max="5000" step="100" value="2000">
+    <span class="val" id="d2-n-val">2000</span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Candidate Positions</h2>
+  <div class="candidates-grid">
+    <div class="candidate-block">
+      <label>Candidate A</label>
+      <div class="subrow">
+        <input type="range" id="c1-pos" min="0.5" max="99.5" step="2" value="20.5">
+        <span class="val" id="c1-pos-val">20.5</span>
+      </div>
+    </div>
+    <div class="candidate-block">
+      <label>Candidate B</label>
+      <div class="subrow">
+        <input type="range" id="c2-pos" min="0.5" max="99.5" step="2" value="40.5">
+        <span class="val" id="c2-pos-val">40.5</span>
+      </div>
+    </div>
+    <div class="candidate-block">
+      <label>Candidate C</label>
+      <div class="subrow">
+        <input type="range" id="c3-pos" min="0.5" max="99.5" step="2" value="60.5">
+        <span class="val" id="c3-pos-val">60.5</span>
+      </div>
+    </div>
+    <div class="candidate-block">
+      <label>Candidate D</label>
+      <div class="subrow">
+        <input type="range" id="c4-pos" min="0.5" max="99.5" step="2" value="80.5">
+        <span class="val" id="c4-pos-val">80.5</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Election Settings</h2>
+  <div class="seats-row">
+    <label>Seats to fill</label>
+    <input type="range" id="seats" min="1" max="4" step="1" value="2">
+    <span class="val" id="seats-val">2</span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Voter Distribution</h2>
+  <svg id="histogram"></svg>
+</div>
+
+<div class="section">
+  <h2>STV Results</h2>
+  <div id="stv-results"></div>
+</div>
+
+<div class="section">
+  <h2>Ranked Ballot Distribution</h2>
+  <div id="rankings-table-wrap">
+    <table id="rankings-table">
+      <thead>
+        <tr>
+          <th>Ranking</th>
+          <th>Voters</th>
+        </tr>
+      </thead>
+      <tbody id="rankings-table-body"></tbody>
+      <tfoot id="rankings-table-foot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Voter Counts by Position</h2>
+  <div id="voter-table-wrap">
+    <table id="voter-table">
+      <thead>
+        <tr>
+          <th>Position</th>
+          <th>Dist 1</th>
+          <th>Dist 2</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="voter-table-body"></tbody>
+      <tfoot id="voter-table-foot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Wire up all sliders to display their current value
+  const bindings = [
+    ['d1-mean', 'd1-mean-val'],
+    ['d1-sd',   'd1-sd-val'],
+    ['d1-n',    'd1-n-val'],
+    ['d2-mean', 'd2-mean-val'],
+    ['d2-sd',   'd2-sd-val'],
+    ['d2-n',    'd2-n-val'],
+    ['c1-pos',  'c1-pos-val'],
+    ['c2-pos',  'c2-pos-val'],
+    ['c3-pos',  'c3-pos-val'],
+    ['c4-pos',  'c4-pos-val'],
+    ['seats',   'seats-val'],
+  ];
+
+  bindings.forEach(([sliderId, displayId]) => {
+    const slider = document.getElementById(sliderId);
+    const display = document.getElementById(displayId);
+    slider.addEventListener('input', () => {
+      display.textContent = slider.value;
+      update();
+    });
+  });
+
+  function normalPDF(x, mean, sd) {
+    const z = (x - mean) / sd;
+    return Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI));
+  }
+
+  // Distribute N voters across integer positions 1-100 using a normal distribution,
+  // clipped to that range. Returns array indexed 0-99 (position = index+1).
+  function distributeVoters(mean, sd, n) {
+    const raw = [];
+    let sum = 0;
+    for (let v = 1; v <= 100; v++) {
+      const p = normalPDF(v, mean, sd);
+      raw.push(p);
+      sum += p;
+    }
+    // Scale to N voters, using largest-remainder (Hamilton) method for integer counts
+    const exact = raw.map(p => (p / sum) * n);
+    const floors = exact.map(Math.floor);
+    const remainder = exact.map((e, i) => e - floors[i]);
+    let allocated = floors.reduce((a, b) => a + b, 0);
+    const needed = Math.round(n) - allocated;
+    // Award remainders to positions with largest fractional parts
+    const order = remainder.map((r, i) => [r, i]).sort((a, b) => b[0] - a[0]);
+    for (let i = 0; i < needed; i++) floors[order[i][1]]++;
+    return floors;
+  }
+
+  function getParams() {
+    return {
+      d1: {
+        mean: +document.getElementById('d1-mean').value,
+        sd:   +document.getElementById('d1-sd').value,
+        n:    +document.getElementById('d1-n').value,
+      },
+      d2: {
+        mean: +document.getElementById('d2-mean').value,
+        sd:   +document.getElementById('d2-sd').value,
+        n:    +document.getElementById('d2-n').value,
+      },
+      candidates: [
+        +document.getElementById('c1-pos').value,
+        +document.getElementById('c2-pos').value,
+        +document.getElementById('c3-pos').value,
+        +document.getElementById('c4-pos').value,
+      ],
+    };
+  }
+
+  // --- Histogram setup (runs once) ---
+  const margin = { top: 16, right: 16, bottom: 30, left: 48 };
+  const svgEl = document.getElementById('histogram');
+  // We'll size the inner area based on the element's rendered width
+  function chartWidth() { return svgEl.clientWidth - margin.left - margin.right || 800; }
+  const chartH = 200;
+
+  const svg = d3.select('#histogram')
+    .attr('height', chartH + margin.top + margin.bottom);
+
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const xScale = d3.scaleLinear().domain([1, 100]);
+  const yScale = d3.scaleLinear().range([chartH, 0]);
+
+  const xAxisG = g.append('g').attr('transform', `translate(0,${chartH})`);
+  const yAxisG = g.append('g');
+  const barsG  = g.append('g').attr('class', 'bars');
+  const linesG = g.append('g').attr('class', 'cand-lines');
+
+  function drawHistogram(totals, candidates) {
+    const w = chartWidth();
+    svg.attr('width', w + margin.left + margin.right);
+    xScale.range([0, w]);
+
+    const barW = w / 100;
+    yScale.domain([0, d3.max(totals)]).nice();
+
+    xAxisG.call(d3.axisBottom(xScale).ticks(10));
+    yAxisG.call(d3.axisLeft(yScale).ticks(5));
+
+    // Bars
+    const bars = barsG.selectAll('rect').data(totals);
+    bars.enter().append('rect')
+      .merge(bars)
+        .attr('x',      (_, i) => xScale(i + 1) - barW / 2)
+        .attr('y',      d => yScale(d))
+        .attr('width',  barW)
+        .attr('height', d => chartH - yScale(d))
+        .attr('fill',   '#222');
+    bars.exit().remove();
+
+    // Candidate lines
+    const lines = linesG.selectAll('line').data(candidates);
+    lines.enter().append('line')
+      .merge(lines)
+        .attr('x1', d => xScale(d))
+        .attr('x2', d => xScale(d))
+        .attr('y1', 0)
+        .attr('y2', chartH)
+        .attr('stroke', 'red')
+        .attr('stroke-width', 2);
+    lines.exit().remove();
+  }
+
+  const CAND_LABELS = ['A', 'B', 'C', 'D'];
+
+  // --- STV engine ---
+
+  // Snapshot current ballot groups: collapse identical remaining-candidate prefixes,
+  // rounding weights to 4 decimal places for display.
+  function snapshotBallots(ballots, active) {
+    const map = new Map();
+    for (const b of ballots) {
+      if (b.weight < 0.0001) continue;
+      const key = b.prefs.filter(c => active.has(c)).join(' > ');
+      if (!key) continue;
+      map.set(key, (map.get(key) || 0) + b.weight);
+    }
+    // Return in insertion order (left→right, matches original ranking order)
+    return [...map.entries()].map(([ranking, weight]) => ({ ranking, weight }));
+  }
+
+  function runSTV(rankingRows, seats) {
+    const totalVotes = rankingRows.reduce((s, r) => s + r.count, 0);
+    const quota = Math.floor(totalVotes / (seats + 1)) + 1;
+
+    let ballots = rankingRows.map(r => ({
+      prefs: r.ranking.split(' > '),
+      weight: r.count,
+    }));
+
+    const allCands = [...new Set(rankingRows.flatMap(r => r.ranking.split(' > ')))];
+    let active = new Set(allCands);
+    let elected = [];
+    let steps = [];
+
+    function tally() {
+      const t = {};
+      for (const c of active) t[c] = 0;
+      for (const b of ballots) {
+        const top = b.prefs.find(c => active.has(c));
+        if (top) t[top] += b.weight;
+      }
+      return t;
+    }
+
+    while (elected.length < seats && active.size > 0) {
+      // Auto-elect if remaining active candidates == remaining seats
+      if (active.size <= seats - elected.length) {
+        const t = tally();
+        for (const c of [...active]) {
+          steps.push({ type: 'elect_remaining', candidate: c, tally: t,
+                       ballots: snapshotBallots(ballots, active) });
+          elected.push(c);
+          active.delete(c);
+        }
+        break;
+      }
+
+      const t = tally();
+      const atQuota = Object.entries(t)
+        .filter(([, v]) => v >= quota)
+        .sort((a, b) => b[1] - a[1]);
+
+      if (atQuota.length > 0) {
+        const [winner, votes] = atQuota[0];
+        const surplus = votes - quota;
+        const fraction = votes > 0 ? surplus / votes : 0;
+
+        elected.push(winner);
+        active.delete(winner);
+
+        // Fractional surplus transfer: ballots that had winner as effective top
+        // get their weight multiplied by the transfer fraction
+        for (const b of ballots) {
+          const top = b.prefs.find(c => c === winner || active.has(c));
+          if (top === winner) b.weight *= fraction;
+        }
+
+        steps.push({ type: 'elect', candidate: winner, votes, surplus, fraction,
+                     tally: t, ballots: snapshotBallots(ballots, active) });
+      } else {
+        // Eliminate the candidate with fewest votes (ties broken alphabetically)
+        const [loser, votes] = Object.entries(t)
+          .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))[0];
+        active.delete(loser);
+        steps.push({ type: 'eliminate', candidate: loser, votes,
+                     tally: t, ballots: snapshotBallots(ballots, active) });
+      }
+    }
+
+    return { quota, totalVotes, steps, elected };
+  }
+
+  // --- STV rendering ---
+
+  function fmt(n) { return Number.isInteger(n) ? n : n.toFixed(2); }
+
+  function tallyTableHTML(tally, quota, highlight, stepType) {
+    const rows = Object.entries(tally)
+      .sort((a, b) => b[1] - a[1])
+      .map(([c, v]) => {
+        const isHighlight = c === highlight;
+        const cls = isHighlight && v >= quota ? 'quota-met' : '';
+        let marker = '';
+        let style = '';
+        if (isHighlight) {
+          if (stepType === 'eliminate') {
+            marker = '<span style="color:#b00">✗</span> ';
+            style = 'text-decoration:line-through;color:#b00';
+          } else {
+            marker = '<span style="color:#1a7a1a">✓</span> ';
+          }
+        }
+        return `<tr class="${cls}"><td style="${style}">${marker}${c}</td><td>${fmt(v)}</td></tr>`;
+      }).join('');
+    return `<table class="stv-table">
+      <caption>Vote tally</caption>
+      <thead><tr><th>Candidate</th><th>Votes</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  function ballotTableHTML(ballots) {
+    if (!ballots || ballots.length === 0) return '';
+    const rows = ballots.map(({ ranking, weight }) =>
+      `<tr><td>${ranking}</td><td>${fmt(weight)}</td></tr>`
+    ).join('');
+    return `<table class="stv-table">
+      <caption>Remaining ballots</caption>
+      <thead><tr><th>Ranking</th><th>Votes</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  function drawSTV(rankings, seats) {
+    const container = document.getElementById('stv-results');
+    if (!rankings.length) { container.innerHTML = ''; return; }
+
+    const { quota, totalVotes, steps, elected } = runSTV(rankings, seats);
+    let html = `<p><strong>Total votes:</strong> ${totalVotes} &nbsp;|&nbsp;
+                   <strong>Droop quota:</strong> ${quota} &nbsp;|&nbsp;
+                   <strong>Seats:</strong> ${seats}</p>`;
+
+    steps.forEach((step, i) => {
+      let desc = '';
+      if (step.type === 'elect') {
+        desc = `<span class="stv-elected">✓ Candidate ${step.candidate} elected</span>
+                with ${fmt(step.votes)} votes &mdash;
+                surplus ${fmt(step.surplus)} transferred at fraction ${step.fraction.toFixed(4)}`;
+      } else if (step.type === 'eliminate') {
+        desc = `<span class="stv-eliminated">✗ Candidate ${step.candidate} eliminated</span>
+                with ${fmt(step.votes)} votes`;
+      } else {
+        desc = `<span class="stv-elected">✓ Candidate ${step.candidate} elected</span>
+                (only remaining candidate for seat)`;
+      }
+
+      html += `<div class="stv-round">
+        <h3>Round ${i + 1}: ${desc}</h3>
+        <div class="stv-tables">
+          ${tallyTableHTML(step.tally, quota, step.candidate, step.type)}
+          ${ballotTableHTML(step.ballots)}
+        </div>
+      </div>`;
+    });
+
+    html += `<p class="stv-summary">Elected: ${elected.join(', ')}</p>`;
+    container.innerHTML = html;
+  }
+
+  // For each voter position, rank candidates by proximity (no ties possible since
+  // candidates are at half-integers and voters at integers).
+  // Returns array of { ranking: "A > B > C > D", count } in left-to-right order
+  // of first appearance (voter position 1 → 100).
+  function computeRankings(totals, candidates) {
+    const seen = new Map(); // ranking string → count
+    const order = [];       // insertion order
+
+    for (let i = 0; i < 100; i++) {
+      const count = totals[i];
+      if (count === 0) continue;
+      const v = i + 1;
+      const ranked = candidates
+        .map((pos, idx) => ({ label: CAND_LABELS[idx], dist: Math.abs(v - pos) }))
+        .sort((a, b) => a.dist - b.dist)
+        .map(c => c.label)
+        .join(' > ');
+      if (!seen.has(ranked)) { seen.set(ranked, 0); order.push(ranked); }
+      seen.set(ranked, seen.get(ranked) + count);
+    }
+
+    return order.map(r => ({ ranking: r, count: seen.get(r) }));
+  }
+
+  function update() {
+    const { d1, d2, candidates } = getParams();
+    const counts1 = distributeVoters(d1.mean, d1.sd, d1.n);
+    const counts2 = distributeVoters(d2.mean, d2.sd, d2.n);
+    const totals = counts1.map((c, i) => c + counts2[i]);
+    drawHistogram(totals, candidates);
+
+    // Rankings table
+    const rankings = computeRankings(totals, candidates);
+    const rtbody = document.getElementById('rankings-table-body');
+    const rtfoot = document.getElementById('rankings-table-foot');
+    rtbody.innerHTML = '';
+    let rankTotal = 0;
+    for (const { ranking, count } of rankings) {
+      rankTotal += count;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${ranking}</td><td>${count}</td>`;
+      rtbody.appendChild(tr);
+    }
+    rtfoot.innerHTML = `<tr><td>Total</td><td>${rankTotal}</td></tr>`;
+
+    // STV
+    const seats = +document.getElementById('seats').value;
+    drawSTV(rankings, seats);
+
+    const tbody = document.getElementById('voter-table-body');
+    const tfoot = document.getElementById('voter-table-foot');
+    tbody.innerHTML = '';
+    let tot1 = 0, tot2 = 0;
+
+    for (let i = 0; i < 100; i++) {
+      const v = i + 1;
+      const c1 = counts1[i], c2 = counts2[i];
+      const total = c1 + c2;
+      tot1 += c1; tot2 += c2;
+      if (total === 0) continue;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${v}</td><td>${c1}</td><td>${c2}</td><td>${total}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    tfoot.innerHTML = `<tr><td>Total</td><td>${tot1}</td><td>${tot2}</td><td>${tot1 + tot2}</td></tr>`;
+  }
+
+  // Initial render
+  update();
+</script>
+</body>
+</html>
