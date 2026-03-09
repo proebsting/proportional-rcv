@@ -176,6 +176,7 @@
 <div class="toolbar">
   <label class="btn" for="upload-input">⬆ Upload config</label>
   <input type="file" id="upload-input" accept=".json" style="display:none">
+  <button id="download-btn">⬇ Download results</button>
   <span id="upload-error"></span>
 </div>
 
@@ -603,6 +604,7 @@
           .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))[0];
         active.delete(loser);
         const perBallot = ballots.map(b => ({
+          weightBefore: b.weight,
           rankingAfter: b.prefs.filter(c => active.has(c)).join(' > ') || '—',
         }));
         steps.push({ type: 'eliminate', candidate: loser, votes,
@@ -754,6 +756,8 @@
     return order.map(r => ({ ranking: r, count: seen.get(r) }));
   }
 
+  let lastComputed = null;
+
   function update() {
     const { d1, d2, candidates } = getParams();
     const counts1 = distributeVoters(d1.mean, d1.sd, d1.n);
@@ -765,6 +769,8 @@
     const seats = +document.getElementById('seats').value;
     const stvResult = rankings.length ? runSTV(rankings, seats) : null;
     const elected = new Set(stvResult ? stvResult.elected : []);
+
+    lastComputed = { d1, d2, candidates, seats, counts1, counts2, totals, rankings, stvResult };
 
     drawHistogram(totals, candidates, elected);
 
@@ -855,6 +861,98 @@
     };
     reader.readAsText(file);
     this.value = ''; // allow re-uploading the same file
+  });
+
+  // --- Download ---
+
+  function buildDownloadJSON() {
+    const { d1, d2, candidates, seats, counts1, counts2, totals, rankings, stvResult } = lastComputed;
+
+    // Per-position voter detail
+    const votersByPosition = [];
+    for (let i = 0; i < 100; i++) {
+      const position = i + 1;
+      const dist1 = counts1[i], dist2 = counts2[i], total = dist1 + dist2;
+      if (total === 0) continue;
+      const ranking = candidates
+        .map((pos, ci) => ({ label: CAND_LABELS[ci], dist: Math.abs(position - pos) }))
+        .sort((a, b) => a.dist - b.dist)
+        .map(c => c.label);
+      votersByPosition.push({ position, dist1, dist2, total, ranking });
+    }
+
+    // STV rounds
+    let stvOut = null;
+    if (stvResult) {
+      const rounds = stvResult.steps.map((step, i) => {
+        const base = {
+          round: i + 1,
+          type: step.type,
+          candidate: step.candidate,
+          tally: Object.fromEntries(
+            Object.entries(step.tally).map(([c, v]) => [c, +v.toFixed(4)])
+          ),
+        };
+        if (step.type === 'eliminate') {
+          base.votes = +step.votes.toFixed(4);
+          base.ballotProgression = rankings.map((r, ri) => ({
+            ranking: r.ranking.split(' > '),
+            voters: +step.perBallot[ri].weightBefore.toFixed(4),
+            rankingAfter: step.perBallot[ri].rankingAfter === '—' ? [] : step.perBallot[ri].rankingAfter.split(' > '),
+          }));
+        } else {
+          if (step.votes  != null) base.votes    = +step.votes.toFixed(4);
+          if (step.surplus != null) base.surplus  = +step.surplus.toFixed(4);
+          if (step.fraction != null) base.transferFraction = +step.fraction.toFixed(6);
+          base.ballotProgression = rankings.map((r, ri) => {
+            const pb = step.perBallot[ri];
+            const weightBefore = +(pb.used + pb.after).toFixed(4);
+            return {
+              ranking: r.ranking.split(' > '),
+              voters: weightBefore,
+              votesUsed: +pb.used.toFixed(4),
+              votesRemaining: +pb.after.toFixed(4),
+              rankingAfter: pb.rankingAfter === '—' ? [] : pb.rankingAfter.split(' > '),
+            };
+          });
+        }
+        return base;
+      });
+
+      stvOut = {
+        totalVotes: stvResult.totalVotes,
+        quota: stvResult.quota,
+        seats,
+        elected: stvResult.elected,
+        rounds,
+      };
+    }
+
+    return {
+      config: {
+        distributions: [
+          { mean: d1.mean, sd: d1.sd, n: d1.n },
+          { mean: d2.mean, sd: d2.sd, n: d2.n },
+        ],
+        candidates: candidates.slice(),
+        seats,
+      },
+      votersByPosition,
+      ballotGroups: rankings.map(r => ({ ranking: r.ranking.split(' > '), voters: r.count })),
+      stv: stvOut,
+    };
+  }
+
+  document.getElementById('download-btn').addEventListener('click', () => {
+    if (!lastComputed) return;
+    const data = JSON.stringify(buildDownloadJSON(), null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'stv-results.json';
+    a.click();
+    URL.revokeObjectURL(url);
   });
 
   // Initial render
