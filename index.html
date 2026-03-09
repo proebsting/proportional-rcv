@@ -156,6 +156,13 @@
     .stv-table td:first-child { text-align: left; }
     .stv-table tr.quota-met td { font-weight: bold; }
     .stv-summary { margin-top: 12px; font-weight: bold; }
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .toolbar button, .toolbar label.btn {
+      padding: 6px 14px; font-size: 0.9em; cursor: pointer;
+      border: 1px solid #aaa; border-radius: 4px; background: #f5f5f5;
+    }
+    .toolbar button:hover, .toolbar label.btn:hover { background: #e8e8e8; }
+    #upload-error { font-size: 0.85em; color: #b00; }
     .stv-progression th, .stv-progression td { white-space: nowrap; }
     .stv-progression th.prog-elect { background: #e8f5e9; color: #1a5c1a; border-left: 2px solid #a5d6a7; }
     .stv-progression th.prog-elim  { background: #ffebee; color: #7f0000; border-left: 2px solid #ef9a9a; }
@@ -165,6 +172,12 @@
 <body>
 
 <h1>STV (Single Transferable Vote) Demonstration</h1>
+
+<div class="toolbar">
+  <label class="btn" for="upload-input">⬆ Upload config</label>
+  <input type="file" id="upload-input" accept=".json" style="display:none">
+  <span id="upload-error"></span>
+</div>
 
 <div class="section">
   <h2>Voter Distribution 1</h2>
@@ -789,6 +802,60 @@
 
     tfoot.innerHTML = `<tr><td>Total</td><td>${tot1}</td><td>${tot2}</td><td>${tot1 + tot2}</td></tr>`;
   }
+
+  // --- Upload ---
+
+  function setSlider(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value;
+    const valEl = document.getElementById(id + '-val');
+    if (valEl) valEl.textContent = value;
+  }
+
+  function loadConfig(cfg) {
+    const err = document.getElementById('upload-error');
+    err.textContent = '';
+    try {
+      if (!cfg.distributions || cfg.distributions.length < 1) throw new Error('Missing distributions');
+      if (!Array.isArray(cfg.candidates) || cfg.candidates.length < 1) throw new Error('Missing candidates');
+
+      const [d1, d2 = {}] = cfg.distributions;
+      setSlider('d1-mean', d1.mean ?? 30);
+      setSlider('d1-sd',   d1.sd   ?? 12);
+      setSlider('d1-n',    d1.n    ?? 1000);
+      setSlider('d2-mean', d2.mean ?? 50);
+      setSlider('d2-sd',   d2.sd   ?? 12);
+      setSlider('d2-n',    d2.n    ?? 0);
+
+      const n = cfg.candidates.length;
+      setSlider('num-candidates', n);
+      document.getElementById('num-candidates-val').textContent = n;
+      candPositions = cfg.candidates.map(p => Math.max(0.5, Math.min(99.5, p)));
+      rebuildCandSliders(n);
+
+      if (cfg.seats != null) setSlider('seats', cfg.seats);
+
+      update();
+    } catch(e) {
+      err.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  document.getElementById('upload-input').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        loadConfig(JSON.parse(e.target.result));
+      } catch(_) {
+        document.getElementById('upload-error').textContent = 'Error: invalid JSON';
+      }
+    };
+    reader.readAsText(file);
+    this.value = ''; // allow re-uploading the same file
+  });
 
   // Initial render
   rebuildCandSliders(4);
