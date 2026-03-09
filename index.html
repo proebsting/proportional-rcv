@@ -557,7 +557,7 @@
 
   // --- STV rendering ---
 
-  function fmt(n) { return Number.isInteger(n) ? n : n.toFixed(2); }
+  function fmt(n) { return n.toFixed(2); }
 
   function tallyTableHTML(tally, quota, highlight, stepType) {
     const rows = Object.entries(tally)
