@@ -411,7 +411,19 @@
   const yAxisG = g.append('g');
   const barsG  = g.append('g').attr('class', 'bars');
   const linesG = g.append('g').attr('class', 'cand-lines');
-  const labelsG = g.append('g').attr('class', 'cand-labels');
+
+  const candDrag = d3.drag()
+    .on('drag', function(event, d) {
+      const raw = xScale.invert(event.x);
+      const snapped = Math.max(0.5, Math.min(99.5, Math.floor(raw) + 0.5));
+      candPositions[d.idx] = snapped;
+      const slider = document.getElementById(`c${d.idx}-pos`);
+      if (slider) {
+        slider.value = snapped;
+        document.getElementById(`c${d.idx}-pos-val`).textContent = snapped;
+      }
+      update();
+    });
 
   // candidates: array of positions; elected: Set of elected label strings
   function drawHistogram(totals, candidates, elected) {
@@ -436,37 +448,40 @@
         .attr('fill',   '#222');
     bars.exit().remove();
 
-    // Build per-candidate data with label, position, and outcome color
-    const candData = candidates.map((pos, i) => {
-      const label = CAND_LABELS[i];
-      const win = elected && elected.has(label);
-      return { pos, label, win };
-    });
+    // Per-candidate data keyed by index so D3 tracks identity across redraws
+    const candData = candidates.map((pos, i) => ({
+      pos, idx: i, label: CAND_LABELS[i], win: elected && elected.has(CAND_LABELS[i]),
+    }));
 
-    // Candidate lines
-    const lines = linesG.selectAll('line').data(candData);
-    lines.enter().append('line')
-      .merge(lines)
-        .attr('x1', d => xScale(d.pos))
-        .attr('x2', d => xScale(d.pos))
-        .attr('y1', 0)
-        .attr('y2', chartH)
-        .attr('stroke', d => d.win ? '#1a7a1a' : '#c00')
-        .attr('stroke-width', 2);
-    lines.exit().remove();
+    // Candidate groups: each holds a wide transparent drag handle, a visible line, and a label
+    const groups = linesG.selectAll('g.cand-group').data(candData, d => d.idx);
 
-    // Candidate labels (rotated text at top of each line)
-    const lbls = labelsG.selectAll('text').data(candData);
-    lbls.enter().append('text')
-      .merge(lbls)
-        .attr('x', d => xScale(d.pos))
-        .attr('y', -4)
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '11px')
-        .attr('font-weight', 'bold')
-        .attr('fill', d => d.win ? '#1a7a1a' : '#c00')
-        .text(d => d.win ? `${d.label} ✓` : `${d.label} ✗`);
-    lbls.exit().remove();
+    const enter = groups.enter().append('g')
+      .attr('class', 'cand-group')
+      .style('cursor', 'ew-resize')
+      .call(candDrag);
+    enter.append('rect').attr('class', 'cand-handle')   // wide invisible hit area
+      .attr('y', 0).attr('width', 12).attr('height', chartH)
+      .attr('fill', 'transparent');
+    enter.append('line').attr('class', 'cand-line')
+      .attr('y1', 0).attr('y2', chartH).attr('stroke-width', 2)
+      .attr('pointer-events', 'none');
+    enter.append('text').attr('class', 'cand-label')
+      .attr('y', -4).attr('text-anchor', 'middle')
+      .attr('font-size', '11px').attr('font-weight', 'bold')
+      .attr('pointer-events', 'none');
+
+    const merged = enter.merge(groups);
+    merged.select('rect.cand-handle').attr('x', d => xScale(d.pos) - 6);
+    merged.select('line.cand-line')
+      .attr('x1', d => xScale(d.pos)).attr('x2', d => xScale(d.pos))
+      .attr('stroke', d => d.win ? '#1a7a1a' : '#c00');
+    merged.select('text.cand-label')
+      .attr('x', d => xScale(d.pos))
+      .attr('fill', d => d.win ? '#1a7a1a' : '#c00')
+      .text(d => d.win ? `${d.label} ✓` : `${d.label} ✗`);
+
+    groups.exit().remove();
   }
 
   const CAND_LABELS = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
