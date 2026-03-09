@@ -24,20 +24,30 @@
     .param-grid input[type=range] { width: 100%; }
     .param-grid .val { font-size: 0.9em; text-align: right; font-variant-numeric: tabular-nums; }
     .section { margin-bottom: 20px; }
-    .candidates-grid {
+    #cand-slider-rows { margin-top: 10px; }
+    .cand-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-    }
-    .candidate-block { display: flex; flex-direction: column; gap: 4px; }
-    .candidate-block label { font-size: 0.85em; font-weight: bold; }
-    .candidate-block .subrow {
-      display: grid;
-      grid-template-columns: 1fr 50px;
+      grid-template-columns: 28px 1fr 50px;
       align-items: center;
-      gap: 6px;
+      gap: 4px 8px;
+      margin-bottom: 3px;
     }
-    .candidate-block .subrow span { font-size: 0.85em; text-align: right; font-variant-numeric: tabular-nums; }
+    .cand-row label { font-size: 0.85em; font-weight: bold; text-align: right; }
+    .cand-row input[type=range] { width: 100%; }
+    .cand-row .val { font-size: 0.85em; text-align: right; font-variant-numeric: tabular-nums; }
+    #cand-axis {
+      display: grid;
+      grid-template-columns: 28px 1fr 50px;
+      gap: 0 8px;
+      margin-top: 2px;
+    }
+    #cand-axis-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75em;
+      color: #888;
+      padding: 0 0;
+    }
     .seats-row {
       display: flex;
       align-items: center;
@@ -187,36 +197,19 @@
 </div>
 
 <div class="section">
-  <h2>Candidate Positions</h2>
-  <div class="candidates-grid">
-    <div class="candidate-block">
-      <label>Candidate A</label>
-      <div class="subrow">
-        <input type="range" id="c1-pos" min="0.5" max="99.5" step="2" value="20.5">
-        <span class="val" id="c1-pos-val">20.5</span>
-      </div>
+  <h2>Candidates</h2>
+  <div class="param-grid">
+    <label>Number of candidates</label>
+    <input type="range" id="num-candidates" min="1" max="26" step="1" value="4">
+    <span class="val" id="num-candidates-val">4</span>
+  </div>
+  <div id="cand-slider-rows"></div>
+  <div id="cand-axis">
+    <div></div>
+    <div id="cand-axis-ticks">
+      <span>1</span><span>25</span><span>50</span><span>75</span><span>100</span>
     </div>
-    <div class="candidate-block">
-      <label>Candidate B</label>
-      <div class="subrow">
-        <input type="range" id="c2-pos" min="0.5" max="99.5" step="2" value="40.5">
-        <span class="val" id="c2-pos-val">40.5</span>
-      </div>
-    </div>
-    <div class="candidate-block">
-      <label>Candidate C</label>
-      <div class="subrow">
-        <input type="range" id="c3-pos" min="0.5" max="99.5" step="2" value="60.5">
-        <span class="val" id="c3-pos-val">60.5</span>
-      </div>
-    </div>
-    <div class="candidate-block">
-      <label>Candidate D</label>
-      <div class="subrow">
-        <input type="range" id="c4-pos" min="0.5" max="99.5" step="2" value="80.5">
-        <span class="val" id="c4-pos-val">80.5</span>
-      </div>
-    </div>
+    <div></div>
   </div>
 </div>
 
@@ -274,28 +267,80 @@
 </div>
 
 <script>
-  // Wire up all sliders to display their current value
-  const bindings = [
+  // Wire up fixed sliders
+  const fixedBindings = [
     ['d1-mean', 'd1-mean-val'],
     ['d1-sd',   'd1-sd-val'],
     ['d1-n',    'd1-n-val'],
     ['d2-mean', 'd2-mean-val'],
     ['d2-sd',   'd2-sd-val'],
     ['d2-n',    'd2-n-val'],
-    ['c1-pos',  'c1-pos-val'],
-    ['c2-pos',  'c2-pos-val'],
-    ['c3-pos',  'c3-pos-val'],
-    ['c4-pos',  'c4-pos-val'],
-    ['seats',   'seats-val'],
   ];
-
-  bindings.forEach(([sliderId, displayId]) => {
+  fixedBindings.forEach(([sliderId, displayId]) => {
     const slider = document.getElementById(sliderId);
     const display = document.getElementById(displayId);
-    slider.addEventListener('input', () => {
-      display.textContent = slider.value;
-      update();
-    });
+    slider.addEventListener('input', () => { display.textContent = slider.value; update(); });
+  });
+
+  document.getElementById('seats').addEventListener('input', function() {
+    document.getElementById('seats-val').textContent = this.value;
+    update();
+  });
+
+  // Default candidate position for index i of n total (evenly spaced, snapped to valid half-integers)
+  function defaultCandPos(i, n) {
+    const raw = (i + 1) / (n + 1) * 100;
+    // Snap to nearest valid position (0.5, 2.5, ..., 99.5)
+    const snapped = Math.round((raw - 0.5) / 2) * 2 + 0.5;
+    return Math.max(0.5, Math.min(99.5, snapped));
+  }
+
+  // Rebuild the candidate slider rows when numCandidates changes.
+  // Preserves existing positions where possible.
+  let candPositions = [20.5, 40.5, 60.5, 80.5]; // starts at default 4
+
+  function rebuildCandSliders(n) {
+    // Extend or trim saved positions
+    while (candPositions.length < n) {
+      const i = candPositions.length;
+      candPositions.push(defaultCandPos(i, n));
+    }
+    candPositions = candPositions.slice(0, n);
+
+    const container = document.getElementById('cand-slider-rows');
+    container.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const label = String.fromCharCode(65 + i); // A, B, C...
+      const pos = candPositions[i];
+      const row = document.createElement('div');
+      row.className = 'cand-row';
+      row.innerHTML = `
+        <label>${label}</label>
+        <input type="range" id="c${i}-pos" min="0.5" max="99.5" step="2" value="${pos}">
+        <span class="val" id="c${i}-pos-val">${pos}</span>`;
+      container.appendChild(row);
+      const slider = row.querySelector('input');
+      slider.addEventListener('input', function() {
+        candPositions[i] = +this.value;
+        document.getElementById(`c${i}-pos-val`).textContent = this.value;
+        update();
+      });
+    }
+
+    // Update seats slider max
+    const seatsSlider = document.getElementById('seats');
+    const prevMax = +seatsSlider.max;
+    seatsSlider.max = n;
+    if (+seatsSlider.value > n) {
+      seatsSlider.value = n;
+      document.getElementById('seats-val').textContent = n;
+    }
+  }
+
+  document.getElementById('num-candidates').addEventListener('input', function() {
+    document.getElementById('num-candidates-val').textContent = this.value;
+    rebuildCandSliders(+this.value);
+    update();
   });
 
   function normalPDF(x, mean, sd) {
@@ -326,6 +371,7 @@
   }
 
   function getParams() {
+    const n = +document.getElementById('num-candidates').value;
     return {
       d1: {
         mean: +document.getElementById('d1-mean').value,
@@ -337,17 +383,12 @@
         sd:   +document.getElementById('d2-sd').value,
         n:    +document.getElementById('d2-n').value,
       },
-      candidates: [
-        +document.getElementById('c1-pos').value,
-        +document.getElementById('c2-pos').value,
-        +document.getElementById('c3-pos').value,
-        +document.getElementById('c4-pos').value,
-      ],
+      candidates: candPositions.slice(0, n),
     };
   }
 
   // --- Histogram setup (runs once) ---
-  const margin = { top: 16, right: 16, bottom: 30, left: 48 };
+  const margin = { top: 28, right: 16, bottom: 30, left: 48 };
   const svgEl = document.getElementById('histogram');
   // We'll size the inner area based on the element's rendered width
   function chartWidth() { return svgEl.clientWidth - margin.left - margin.right || 800; }
@@ -366,8 +407,10 @@
   const yAxisG = g.append('g');
   const barsG  = g.append('g').attr('class', 'bars');
   const linesG = g.append('g').attr('class', 'cand-lines');
+  const labelsG = g.append('g').attr('class', 'cand-labels');
 
-  function drawHistogram(totals, candidates) {
+  // candidates: array of positions; elected: Set of elected label strings
+  function drawHistogram(totals, candidates, elected) {
     const w = chartWidth();
     svg.attr('width', w + margin.left + margin.right);
     xScale.range([0, w]);
@@ -378,7 +421,7 @@
     xAxisG.call(d3.axisBottom(xScale).ticks(10));
     yAxisG.call(d3.axisLeft(yScale).ticks(5));
 
-    // Bars
+    // Voter bars
     const bars = barsG.selectAll('rect').data(totals);
     bars.enter().append('rect')
       .merge(bars)
@@ -389,20 +432,40 @@
         .attr('fill',   '#222');
     bars.exit().remove();
 
+    // Build per-candidate data with label, position, and outcome color
+    const candData = candidates.map((pos, i) => {
+      const label = CAND_LABELS[i];
+      const win = elected && elected.has(label);
+      return { pos, label, win };
+    });
+
     // Candidate lines
-    const lines = linesG.selectAll('line').data(candidates);
+    const lines = linesG.selectAll('line').data(candData);
     lines.enter().append('line')
       .merge(lines)
-        .attr('x1', d => xScale(d))
-        .attr('x2', d => xScale(d))
+        .attr('x1', d => xScale(d.pos))
+        .attr('x2', d => xScale(d.pos))
         .attr('y1', 0)
         .attr('y2', chartH)
-        .attr('stroke', 'red')
+        .attr('stroke', d => d.win ? '#1a7a1a' : '#c00')
         .attr('stroke-width', 2);
     lines.exit().remove();
+
+    // Candidate labels (rotated text at top of each line)
+    const lbls = labelsG.selectAll('text').data(candData);
+    lbls.enter().append('text')
+      .merge(lbls)
+        .attr('x', d => xScale(d.pos))
+        .attr('y', -4)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '11px')
+        .attr('font-weight', 'bold')
+        .attr('fill', d => d.win ? '#1a7a1a' : '#c00')
+        .text(d => d.win ? `${d.label} ✓` : `${d.label} ✗`);
+    lbls.exit().remove();
   }
 
-  const CAND_LABELS = ['A', 'B', 'C', 'D'];
+  const CAND_LABELS = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
 
   // --- STV engine ---
 
@@ -598,10 +661,16 @@
     const counts1 = distributeVoters(d1.mean, d1.sd, d1.n);
     const counts2 = distributeVoters(d2.mean, d2.sd, d2.n);
     const totals = counts1.map((c, i) => c + counts2[i]);
-    drawHistogram(totals, candidates);
+
+    // Rankings + STV (needed before histogram so we know winners)
+    const rankings = computeRankings(totals, candidates);
+    const seats = +document.getElementById('seats').value;
+    const stvResult = rankings.length ? runSTV(rankings, seats) : null;
+    const elected = new Set(stvResult ? stvResult.elected : []);
+
+    drawHistogram(totals, candidates, elected);
 
     // Rankings table
-    const rankings = computeRankings(totals, candidates);
     const rtbody = document.getElementById('rankings-table-body');
     const rtfoot = document.getElementById('rankings-table-foot');
     rtbody.innerHTML = '';
@@ -614,8 +683,7 @@
     }
     rtfoot.innerHTML = `<tr><td>Total</td><td>${rankTotal}</td></tr>`;
 
-    // STV
-    const seats = +document.getElementById('seats').value;
+    // STV display
     drawSTV(rankings, seats);
 
     const tbody = document.getElementById('voter-table-body');
@@ -638,6 +706,7 @@
   }
 
   // Initial render
+  rebuildCandSliders(4);
   update();
 </script>
 </body>
