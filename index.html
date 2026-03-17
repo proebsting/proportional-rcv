@@ -242,6 +242,10 @@
 
 <div class="section">
   <h2>Voter Distribution</h2>
+  <div style="margin-bottom:8px; font-size:0.85em; display:flex; gap:16px;">
+    <label><input type="checkbox" id="show-median" checked> Show median</label>
+    <label><input type="checkbox" id="show-average" checked> Show average</label>
+  </div>
   <svg id="histogram"></svg>
 </div>
 
@@ -423,8 +427,10 @@
 
   const xAxisG = g.append('g').attr('transform', `translate(0,${chartH})`);
   const yAxisG = g.append('g');
-  const barsG  = g.append('g').attr('class', 'bars');
-  const linesG = g.append('g').attr('class', 'cand-lines');
+  const barsG   = g.append('g').attr('class', 'bars');
+  const medianG  = g.append('g').attr('class', 'median-line');
+  const averageG = g.append('g').attr('class', 'average-line');
+  const linesG   = g.append('g').attr('class', 'cand-lines');
 
   const candDrag = d3.drag()
     .on('drag', function(event, d) {
@@ -496,6 +502,46 @@
       .text(d => d.win ? `${d.label} ✓` : `${d.label} ✗`);
 
     groups.exit().remove();
+
+    // Median and average voter lines
+    const total = totals.reduce((a, b) => a + b, 0);
+    let cum = 0, median = 1;
+    for (let i = 0; i < 100; i++) {
+      cum += totals[i];
+      if (cum >= total / 2) { median = i + 1; break; }
+    }
+    const average = total > 0 ? totals.reduce((s, c, i) => s + c * (i + 1), 0) / total : 1;
+
+    const showMedian  = document.getElementById('show-median').checked;
+    const showAverage = document.getElementById('show-average').checked;
+
+    const mx = xScale(median);
+    medianG.style('display', showMedian ? null : 'none');
+    medianG.selectAll('line').data([median]).join('line')
+      .attr('x1', mx).attr('x2', mx)
+      .attr('y1', 0).attr('y2', chartH)
+      .attr('stroke', '#5b4fcf')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '5,3');
+    medianG.selectAll('text').data([median]).join('text')
+      .attr('x', mx + 3).attr('y', 10)
+      .attr('font-size', '10px')
+      .attr('fill', '#5b4fcf')
+      .text(`Median (${median})`);
+
+    const ax = xScale(average);
+    averageG.style('display', showAverage ? null : 'none');
+    averageG.selectAll('line').data([average]).join('line')
+      .attr('x1', ax).attr('x2', ax)
+      .attr('y1', 0).attr('y2', chartH)
+      .attr('stroke', '#c47a00')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '5,3');
+    averageG.selectAll('text').data([average]).join('text')
+      .attr('x', ax + 3).attr('y', 22)
+      .attr('font-size', '10px')
+      .attr('fill', '#c47a00')
+      .text(`Mean (${average.toFixed(1)})`);
   }
 
   const CAND_LABELS = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
@@ -819,10 +865,12 @@
     if (valEl) valEl.textContent = value;
   }
 
-  function loadConfig(cfg) {
+  function loadConfig(json) {
     const err = document.getElementById('upload-error');
     err.textContent = '';
     try {
+      const cfg = json.config;
+      if (!cfg) throw new Error('Missing "config" key');
       if (!cfg.distributions || cfg.distributions.length < 1) throw new Error('Missing distributions');
       if (!Array.isArray(cfg.candidates) || cfg.candidates.length < 1) throw new Error('Missing candidates');
 
@@ -954,6 +1002,9 @@
     a.click();
     URL.revokeObjectURL(url);
   });
+
+  document.getElementById('show-median').addEventListener('change', update);
+  document.getElementById('show-average').addEventListener('change', update);
 
   // Initial render
   rebuildCandSliders(4);
