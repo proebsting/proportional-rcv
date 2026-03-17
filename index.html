@@ -427,10 +427,13 @@
 
   const xAxisG = g.append('g').attr('transform', `translate(0,${chartH})`);
   const yAxisG = g.append('g');
-  const barsG   = g.append('g').attr('class', 'bars');
-  const medianG  = g.append('g').attr('class', 'median-line');
-  const averageG = g.append('g').attr('class', 'average-line');
-  const linesG   = g.append('g').attr('class', 'cand-lines');
+  const barsG     = g.append('g').attr('class', 'bars');
+  const dist1BarsG = g.append('g').attr('class', 'dist1-bars');
+  const dist2BarsG = g.append('g').attr('class', 'dist2-bars');
+  const medianG   = g.append('g').attr('class', 'median-line');
+  const averageG  = g.append('g').attr('class', 'average-line');
+  const linesG    = g.append('g').attr('class', 'cand-lines');
+  const handlesG  = g.append('g').attr('class', 'dist-handles');
 
   const candDrag = d3.drag()
     .on('drag', function(event, d) {
@@ -445,8 +448,35 @@
       update();
     });
 
+  const DIST_COLORS = { d1: '#2a72c3', d2: '#b03a2a' };
+  let activeDistKey = null;
+  let distDragYScale = null;  // frozen copy of yScale at drag start
+
+  const distDrag = d3.drag()
+    .on('start', function(event, d) {
+      activeDistKey  = d.key;
+      distDragYScale = yScale.copy();  // freeze so SD mapping stays stable during drag
+      update();
+    })
+    .on('drag', function(event, d) {
+      const n = +document.getElementById(`${d.key}-n`).value;
+      const newMean = Math.max(1, Math.min(100, Math.round(xScale.invert(event.x))));
+      // Peak count at cursor → SD: peak ≈ n / (sd * sqrt(2π))  →  sd = n / (peak * sqrt(2π))
+      // Higher cursor (smaller y) → larger peak → smaller SD (tighter curve)
+      const peakAtCursor = Math.max(1, distDragYScale.invert(event.y));
+      const newSd = Math.max(1, Math.min(40, Math.round(n / (peakAtCursor * Math.sqrt(2 * Math.PI)))));
+      setSlider(`${d.key}-mean`, newMean);
+      setSlider(`${d.key}-sd`,   newSd);
+      update();
+    })
+    .on('end', function() {
+      activeDistKey  = null;
+      distDragYScale = null;
+      update();
+    });
+
   // candidates: array of positions; elected: Set of elected label strings
-  function drawHistogram(totals, candidates, elected) {
+  function drawHistogram(totals, counts1, counts2, candidates, elected, d1, d2) {
     const w = chartWidth();
     svg.attr('width', w + margin.left + margin.right);
     xScale.range([0, w]);
@@ -457,7 +487,8 @@
     xAxisG.call(d3.axisBottom(xScale).ticks(10));
     yAxisG.call(d3.axisLeft(yScale).ticks(5));
 
-    // Voter bars
+    // Voter bars (dimmed when a distribution is active)
+    const barOpacity = activeDistKey ? 0.25 : 1;
     const bars = barsG.selectAll('rect').data(totals);
     bars.enter().append('rect')
       .merge(bars)
@@ -465,8 +496,31 @@
         .attr('y',      d => yScale(d))
         .attr('width',  barW)
         .attr('height', d => chartH - yScale(d))
-        .attr('fill',   '#222');
+        .attr('fill',   '#222')
+        .attr('opacity', barOpacity);
     bars.exit().remove();
+
+    // Individual distribution overlays (shown while dragging a handle)
+    const overlayDefs = [
+      { key: 'd1', grp: dist1BarsG, counts: counts1 },
+      { key: 'd2', grp: dist2BarsG, counts: counts2 },
+    ];
+    for (const { key, grp, counts } of overlayDefs) {
+      const show = activeDistKey === key;
+      grp.style('display', show ? null : 'none');
+      if (show) {
+        const color = DIST_COLORS[key];
+        const ob = grp.selectAll('rect').data(counts);
+        ob.enter().append('rect').merge(ob)
+          .attr('x',      (_, i) => xScale(i + 1) - barW / 2)
+          .attr('y',      v => yScale(v))
+          .attr('width',  barW)
+          .attr('height', v => chartH - yScale(v))
+          .attr('fill',   color)
+          .attr('opacity', 0.75);
+        ob.exit().remove();
+      }
+    }
 
     // Per-candidate data keyed by index so D3 tracks identity across redraws
     const candData = candidates.map((pos, i) => ({
@@ -542,6 +596,44 @@
       .attr('font-size', '10px')
       .attr('fill', '#c47a00')
       .text(`Mean (${average.toFixed(1)})`);
+
+    // Distribution drag handles — circle at peak of each distribution
+    const handleData = d1 && d2 ? [
+      { key: 'd1', label: '1', mean: d1.mean, peakCount: d3.max(counts1) },
+      { key: 'd2', label: '2', mean: d2.mean, peakCount: d3.max(counts2) },
+    ] : [];
+
+    const hGroups = handlesG.selectAll('g.dist-handle').data(handleData, d => d.key);
+
+    const hEnter = hGroups.enter().append('g')
+      .attr('class', 'dist-handle')
+      .style('cursor', 'move')
+      .call(distDrag);
+    hEnter.append('circle').attr('r', 9).attr('stroke-width', 2).attr('fill', 'white');
+    hEnter.append('line').attr('class', 'hx')
+      .attr('x1', -4).attr('x2', 4).attr('y1', 0).attr('y2', 0)
+      .attr('stroke-width', 1.5).attr('pointer-events', 'none');
+    hEnter.append('line').attr('class', 'hy')
+      .attr('x1', 0).attr('x2', 0).attr('y1', -4).attr('y2', 4)
+      .attr('stroke-width', 1.5).attr('pointer-events', 'none');
+    hEnter.append('text')
+      .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+      .attr('font-size', '9px').attr('font-weight', 'bold').attr('pointer-events', 'none');
+
+    const hMerged = hEnter.merge(hGroups);
+    hMerged.each(function(d) {
+      const color = DIST_COLORS[d.key];
+      const active = activeDistKey === d.key;
+      d3.select(this).attr('transform', `translate(${xScale(d.mean)},${yScale(d.peakCount)})`);
+      d3.select(this).select('circle')
+        .attr('stroke', color)
+        .attr('fill', active ? color : 'white')
+        .attr('r', active ? 10 : 9);
+      d3.select(this).select('line.hx').attr('stroke', active ? 'white' : color);
+      d3.select(this).select('line.hy').attr('stroke', active ? 'white' : color);
+      d3.select(this).select('text').attr('fill', active ? 'white' : color).text(d.label);
+    });
+    hGroups.exit().remove();
   }
 
   const CAND_LABELS = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
@@ -818,7 +910,7 @@
 
     lastComputed = { d1, d2, candidates, seats, counts1, counts2, totals, rankings, stvResult };
 
-    drawHistogram(totals, candidates, elected);
+    drawHistogram(totals, counts1, counts2, candidates, elected, d1, d2);
 
     // Rankings table
     const rtbody = document.getElementById('rankings-table-body');
