@@ -27,7 +27,7 @@
     #cand-slider-rows { margin-top: 10px; }
     .cand-row {
       display: grid;
-      grid-template-columns: 28px 1fr 50px;
+      grid-template-columns: 16px 28px 1fr 50px;
       align-items: center;
       gap: 4px 8px;
       margin-bottom: 3px;
@@ -35,9 +35,10 @@
     .cand-row label { font-size: 0.85em; font-weight: bold; text-align: right; }
     .cand-row input[type=range] { width: 100%; }
     .cand-row .val { font-size: 0.85em; text-align: right; font-variant-numeric: tabular-nums; }
+    .cand-row.disabled label, .cand-row.disabled input[type=range], .cand-row.disabled .val { opacity: 0.35; }
     #cand-axis {
       display: grid;
-      grid-template-columns: 28px 1fr 50px;
+      grid-template-columns: 16px 28px 1fr 50px;
       gap: 0 8px;
       margin-top: 2px;
     }
@@ -235,6 +236,7 @@
   <div id="cand-slider-rows"></div>
   <div id="cand-axis">
     <div></div>
+    <div></div>
     <div id="cand-axis-ticks">
       <span>1</span><span>25</span><span>50</span><span>75</span><span>100</span>
     </div>
@@ -334,44 +336,46 @@
   }
 
   // Rebuild the candidate slider rows when numCandidates changes.
-  // Preserves existing positions where possible.
+  // Preserves existing positions and enabled states where possible.
   let candPositions = [20.5, 40.5, 60.5, 80.5]; // starts at default 4
+  let candEnabled   = [true, true, true, true];
 
   function rebuildCandSliders(n) {
-    // Extend or trim saved positions
+    // Extend or trim saved positions and enabled flags
     while (candPositions.length < n) {
       const i = candPositions.length;
       candPositions.push(defaultCandPos(i, n));
+      candEnabled.push(true);
     }
     candPositions = candPositions.slice(0, n);
+    candEnabled   = candEnabled.slice(0, n);
 
     const container = document.getElementById('cand-slider-rows');
     container.innerHTML = '';
     for (let i = 0; i < n; i++) {
       const label = String.fromCharCode(65 + i); // A, B, C...
-      const pos = candPositions[i];
+      const pos     = candPositions[i];
+      const enabled = candEnabled[i];
       const row = document.createElement('div');
-      row.className = 'cand-row';
+      row.className = 'cand-row' + (enabled ? '' : ' disabled');
       row.innerHTML = `
+        <input type="checkbox" id="c${i}-enabled" ${enabled ? 'checked' : ''} title="Include candidate ${label}">
         <label>${label}</label>
-        <input type="range" id="c${i}-pos" min="0.5" max="99.5" step="1" value="${pos}">
+        <input type="range" id="c${i}-pos" min="0.5" max="99.5" step="1" value="${pos}" ${enabled ? '' : 'disabled'}>
         <span class="val" id="c${i}-pos-val">${pos}</span>`;
       container.appendChild(row);
-      const slider = row.querySelector('input');
-      slider.addEventListener('input', function() {
+
+      row.querySelector(`#c${i}-enabled`).addEventListener('change', function() {
+        candEnabled[i] = this.checked;
+        row.className = 'cand-row' + (this.checked ? '' : ' disabled');
+        row.querySelector(`#c${i}-pos`).disabled = !this.checked;
+        update();
+      });
+      row.querySelector(`#c${i}-pos`).addEventListener('input', function() {
         candPositions[i] = +this.value;
         document.getElementById(`c${i}-pos-val`).textContent = this.value;
         update();
       });
-    }
-
-    // Update seats slider max
-    const seatsSlider = document.getElementById('seats');
-    const prevMax = +seatsSlider.max;
-    seatsSlider.max = n;
-    if (+seatsSlider.value > n) {
-      seatsSlider.value = n;
-      document.getElementById('seats-val').textContent = n;
     }
   }
 
@@ -421,7 +425,10 @@
         sd:   +document.getElementById('d2-sd').value,
         n:    +document.getElementById('d2-n').value,
       },
-      candidates: candPositions.slice(0, n),
+      // Each entry: { pos, label, origIdx } — only enabled candidates
+      candidates: candPositions.slice(0, n)
+        .map((pos, i) => ({ pos, label: CAND_LABELS[i], origIdx: i }))
+        .filter((_, i) => candEnabled[i]),
     };
   }
 
@@ -538,9 +545,9 @@
       }
     }
 
-    // Per-candidate data keyed by index so D3 tracks identity across redraws
-    const candData = candidates.map((pos, i) => ({
-      pos, idx: i, label: CAND_LABELS[i], win: elected && elected.has(CAND_LABELS[i]),
+    // Per-candidate data keyed by origIdx so D3 tracks identity across redraws
+    const candData = candidates.map(c => ({
+      pos: c.pos, idx: c.origIdx, label: c.label, win: elected && elected.has(c.label),
     }));
 
     // Candidate groups: each holds a wide transparent drag handle, a visible line, and a label
@@ -899,7 +906,7 @@
       if (count === 0) continue;
       const v = i + 1;
       const ranked = candidates
-        .map((pos, idx) => ({ label: CAND_LABELS[idx], dist: Math.abs(v - pos) }))
+        .map(c => ({ label: c.label, dist: Math.abs(v - c.pos) }))
         .sort((a, b) => a.dist - b.dist)
         .map(c => c.label)
         .join(' > ');
@@ -917,6 +924,14 @@
     const counts1 = distributeVoters(d1.mean, d1.sd, d1.n);
     const counts2 = distributeVoters(d2.mean, d2.sd, d2.n);
     const totals = counts1.map((c, i) => c + counts2[i]);
+
+    // Keep seats slider bounded by number of enabled candidates
+    const seatsSlider = document.getElementById('seats');
+    seatsSlider.max = candidates.length;
+    if (+seatsSlider.value > candidates.length) {
+      seatsSlider.value = candidates.length;
+      document.getElementById('seats-val').textContent = candidates.length;
+    }
 
     // Rankings + STV (needed before histogram so we know winners)
     const rankings = computeRankings(totals, candidates);
@@ -994,6 +1009,7 @@
       setSlider('num-candidates', n);
       document.getElementById('num-candidates-val').textContent = n;
       candPositions = cfg.candidates.map(p => Math.max(0.5, Math.min(99.5, p)));
+      candEnabled   = cfg.candidates.map(() => true);
       rebuildCandSliders(n);
 
       if (cfg.seats != null) setSlider('seats', cfg.seats);
@@ -1031,7 +1047,7 @@
       const dist1 = counts1[i], dist2 = counts2[i], total = dist1 + dist2;
       if (total === 0) continue;
       const ranking = candidates
-        .map((pos, ci) => ({ label: CAND_LABELS[ci], dist: Math.abs(position - pos) }))
+        .map(c => ({ label: c.label, dist: Math.abs(position - c.pos) }))
         .sort((a, b) => a.dist - b.dist)
         .map(c => c.label);
       votersByPosition.push({ position, dist1, dist2, total, ranking });
@@ -1090,7 +1106,7 @@
           { mean: d1.mean, sd: d1.sd, n: d1.n },
           { mean: d2.mean, sd: d2.sd, n: d2.n },
         ],
-        candidates: candidates.slice(),
+        candidates: candidates.map(c => c.pos),
         seats,
       },
       votersByPosition,
