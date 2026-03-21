@@ -243,6 +243,10 @@
     <input type="range" id="num-parties" min="0" max="10" step="1" value="0">
     <span class="val" id="num-parties-val">0</span>
   </div>
+  <div style="margin: 6px 0 10px; font-size: 0.9em;">
+    <label><input type="checkbox" id="allow-leakage" checked> Allow voter leakage</label>
+    <span style="font-size:0.85em; color:#666; margin-left:8px;">(when unchecked and parties are assigned, voters rank all own-party candidates above any other-party candidate)</span>
+  </div>
   <div id="cand-slider-rows"></div>
   <div id="cand-axis">
     <div></div>
@@ -433,6 +437,12 @@
     numParties = +this.value;
     document.getElementById('num-parties-val').textContent = this.value;
     rebuildCandSliders(+document.getElementById('num-candidates').value);
+    update();
+  });
+
+  let allowLeakage = true;
+  document.getElementById('allow-leakage').addEventListener('change', function() {
+    allowLeakage = this.checked;
     update();
   });
 
@@ -954,16 +964,25 @@
   function computeRankings(totals, candidates) {
     const seen = new Map(); // ranking string → count
     const order = [];       // insertion order
+    const usePartyRanking = !allowLeakage && candidates.some(c => c.party != null);
 
     for (let i = 0; i < 100; i++) {
       const count = totals[i];
       if (count === 0) continue;
       const v = i + 1;
-      const ranked = candidates
-        .map(c => ({ label: c.label, dist: Math.abs(v - c.pos) }))
-        .sort((a, b) => a.dist - b.dist)
-        .map(c => c.label)
-        .join(' > ');
+      const withDist = candidates.map(c => ({ ...c, dist: Math.abs(v - c.pos) }));
+
+      let ranked;
+      if (usePartyRanking) {
+        // Voter's party = party of the closest candidate
+        const voterParty = withDist.reduce((a, b) => a.dist < b.dist ? a : b).party;
+        const ownParty   = withDist.filter(c => c.party === voterParty).sort((a, b) => a.dist - b.dist);
+        const otherParty = withDist.filter(c => c.party !== voterParty).sort((a, b) => a.dist - b.dist);
+        ranked = [...ownParty, ...otherParty].map(c => c.label).join(' > ');
+      } else {
+        ranked = withDist.sort((a, b) => a.dist - b.dist).map(c => c.label).join(' > ');
+      }
+
       if (!seen.has(ranked)) { seen.set(ranked, 0); order.push(ranked); }
       seen.set(ranked, seen.get(ranked) + count);
     }
@@ -1064,9 +1083,11 @@
       document.getElementById('num-candidates-val').textContent = n;
       candPositions = cfg.candidates.map(p => Math.max(0.5, Math.min(99.5, p)));
       candEnabled   = cfg.candidates.map(() => true);
-      numParties    = cfg.numParties ?? 0;
-      candParties   = cfg.candParties?.length === n ? cfg.candParties.slice() : cfg.candidates.map(() => 1);
+      numParties  = cfg.numParties ?? 0;
+      candParties = cfg.candParties?.length === n ? cfg.candParties.slice() : cfg.candidates.map(() => 1);
+      allowLeakage = cfg.allowLeakage ?? true;
       setSlider('num-parties', numParties);
+      document.getElementById('allow-leakage').checked = allowLeakage;
       rebuildCandSliders(n);
 
       if (cfg.seats != null) setSlider('seats', cfg.seats);
@@ -1166,6 +1187,7 @@
         candidates: candidates.map(c => c.pos),
         numParties,
         candParties: numParties > 0 ? candidates.map(c => c.party) : [],
+        allowLeakage,
         seats,
       },
       votersByPosition,
