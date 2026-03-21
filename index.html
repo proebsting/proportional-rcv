@@ -167,11 +167,19 @@
     .stv-progression th.prog-elect { background: #e8f5e9; color: #1a5c1a; border-left: 2px solid #a5d6a7; }
     .stv-progression th.prog-elim  { background: #ffebee; color: #7f0000; border-left: 2px solid #ef9a9a; }
     .stv-progression td { border-left: 1px solid #eee; }
+    .section-desc { font-size: 0.88em; color: #555; margin: 0 0 12px; line-height: 1.5; }
   </style>
 </head>
 <body>
 
 <h1>STV (Single Transferable Vote) Demonstration</h1>
+
+<p style="font-size:0.92em; line-height:1.6; max-width:720px; margin-bottom:20px;">
+  This demo simulates a <strong>Single Transferable Vote</strong> election on a simplified one-dimensional political spectrum (positions 1–100).
+  Voters are modeled as two normal distributions along that spectrum; each voter ranks all candidates in order of proximity to their own position.
+  STV then fills the available seats through successive rounds of quota-based election and elimination, transferring surplus or exhausted votes until all seats are filled.
+  Adjust the distributions and candidate positions below and watch the results update in real time.
+</p>
 
 <div class="toolbar">
   <label class="btn" for="upload-input">⬆ Upload config</label>
@@ -182,6 +190,7 @@
 
 <div class="section">
   <h2>Voter Distribution 1</h2>
+  <p class="section-desc">A group of voters centered around a position on the spectrum, modeled as a normal distribution. Adjust the <strong>mean</strong> (center position), <strong>std dev</strong> (spread), and total number of <strong>voters</strong>. You can also drag the blue handle on the histogram — left/right changes the mean, up/down changes the spread.</p>
   <div class="param-grid">
     <label>Mean</label>
     <input type="range" id="d1-mean" min="1" max="100" step="1" value="30">
@@ -199,6 +208,7 @@
 
 <div class="section">
   <h2>Voter Distribution 2</h2>
+  <p class="section-desc">A second independent group of voters. Use this to model a bimodal electorate — for example, two ideological blocs of different sizes. Drag the red handle on the histogram to adjust interactively.</p>
   <div class="param-grid">
     <label>Mean</label>
     <input type="range" id="d2-mean" min="1" max="100" step="1" value="70">
@@ -216,6 +226,7 @@
 
 <div class="section">
   <h2>Candidates</h2>
+  <p class="section-desc">Set the number of candidates (up to 26, labeled A–Z) and their positions on the spectrum. Each voter ranks candidates from nearest to farthest. Candidate positions can be adjusted with the sliders or by dragging their vertical lines directly on the histogram.</p>
   <div class="param-grid">
     <label>Number of candidates</label>
     <input type="range" id="num-candidates" min="1" max="26" step="1" value="4">
@@ -233,6 +244,7 @@
 
 <div class="section">
   <h2>Election Settings</h2>
+  <p class="section-desc">The number of seats to be filled in this election. The <strong>Droop quota</strong> — the minimum votes a candidate needs to win a seat — is calculated automatically as ⌊votes / (seats + 1)⌋ + 1. More seats generally leads to more proportional representation.</p>
   <div class="seats-row">
     <label>Seats to fill</label>
     <input type="range" id="seats" min="1" max="4" step="1" value="2">
@@ -242,6 +254,7 @@
 
 <div class="section">
   <h2>Voter Distribution</h2>
+  <p class="section-desc">Combined histogram of all voters across the spectrum. Candidate positions are shown as vertical lines — green with a checkmark if elected, red with an ✗ if eliminated. The dashed <span style="color:#5b4fcf">purple</span> line marks the <strong>median</strong> voter and the dashed <span style="color:#c47a00">orange</span> line marks the <strong>mean</strong>. Drag the <span style="color:#2a72c3"><strong>blue (D1)</strong></span> or <span style="color:#b03a2a"><strong>red (D2)</strong></span> handle to adjust that distribution interactively.</p>
   <div style="margin-bottom:8px; font-size:0.85em; display:flex; gap:16px;">
     <label><input type="checkbox" id="show-median" checked> Show median</label>
     <label><input type="checkbox" id="show-average" checked> Show average</label>
@@ -251,11 +264,13 @@
 
 <div class="section">
   <h2>STV Results</h2>
+  <p class="section-desc">Round-by-round results of the STV count. The ballot progression table shows how each ballot group's votes are used or transferred across rounds. Each subsequent round shows either a candidate reaching the Droop quota (surplus votes transferred fractionally) or the lowest candidate being eliminated (their votes redistributed to next preferences).</p>
   <div id="stv-results"></div>
 </div>
 
 <div class="section">
   <h2>Ranked Ballot Distribution</h2>
+  <p class="section-desc">Every distinct ballot ranking that appears in this election and the number of voters who hold it. Voters at positions equidistant from two candidates will always have a clear nearest neighbor because candidates are placed at half-integer positions while voters are at integers.</p>
   <div id="rankings-table-wrap">
     <table id="rankings-table">
       <thead>
@@ -272,6 +287,7 @@
 
 <div class="section">
   <h2>Voter Counts by Position</h2>
+  <p class="section-desc">The full breakdown of how many voters from each distribution fall at each integer position on the spectrum. Positions with zero voters are omitted.</p>
   <div id="voter-table-wrap">
     <table id="voter-table">
       <thead>
