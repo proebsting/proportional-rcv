@@ -247,6 +247,7 @@
     <label><input type="checkbox" id="allow-leakage" checked> Allow voter leakage</label>
     <span style="font-size:0.85em; color:#666; margin-left:8px;">(when unchecked and parties are assigned, voters rank all own-party candidates above any other-party candidate)</span>
   </div>
+  <div id="div-lines-section"></div>
   <div id="cand-slider-rows"></div>
   <div id="cand-axis">
     <div></div>
@@ -433,9 +434,52 @@
     update();
   });
 
+  // Dividing lines: N parties → N-1 half-integer dividing lines
+  let divLines = [50.5];  // default for 2 parties
+
+  function defaultDivLine(k, n) {
+    // k is 1-indexed split point; produces evenly-spaced half-integer positions
+    return Math.floor(100 * k / n) + 0.5;
+  }
+
+  function rebuildDivLines(n) {
+    const numLines = Math.max(0, n - 1);
+    // Extend with defaults or trim
+    while (divLines.length < numLines) {
+      const k = divLines.length + 1;
+      divLines.push(defaultDivLine(k, n));
+    }
+    divLines = divLines.slice(0, numLines);
+
+    const section = document.getElementById('div-lines-section');
+    if (numLines === 0) { section.innerHTML = ''; return; }
+
+    section.innerHTML = '<div style="font-size:0.85em;font-weight:bold;color:#555;margin:6px 0 4px;">Party dividing lines</div>';
+    for (let k = 0; k < numLines; k++) {
+      const val = divLines[k];
+      const row = document.createElement('div');
+      row.className = 'param-grid';
+      row.style.marginBottom = '4px';
+      row.innerHTML = `
+        <label style="font-size:0.85em;">Party ${k+1} | Party ${k+2}</label>
+        <input type="range" id="divline-${k}" min="1.5" max="99.5" step="1" value="${val}">
+        <span class="val" id="divline-${k}-val">${val}</span>`;
+      section.appendChild(row);
+      row.querySelector(`#divline-${k}`).addEventListener('input', function() {
+        divLines[k] = +this.value;
+        document.getElementById(`divline-${k}-val`).textContent = this.value;
+        update();
+      });
+    }
+  }
+
   document.getElementById('num-parties').addEventListener('input', function() {
-    numParties = +this.value;
-    document.getElementById('num-parties-val').textContent = this.value;
+    let v = +this.value;
+    // Minimum when active is 2; skip 1 by snapping based on direction
+    if (v === 1) { v = numParties === 0 ? 2 : 0; this.value = v; }
+    numParties = v;
+    document.getElementById('num-parties-val').textContent = v;
+    rebuildDivLines(v);
     rebuildCandSliders(+document.getElementById('num-candidates').value);
     update();
   });
@@ -511,10 +555,11 @@
 
   const xAxisG = g.append('g').attr('transform', `translate(0,${chartH})`);
   const yAxisG = g.append('g');
-  const barsG     = g.append('g').attr('class', 'bars');
+  const barsG      = g.append('g').attr('class', 'bars');
   const dist1BarsG = g.append('g').attr('class', 'dist1-bars');
   const dist2BarsG = g.append('g').attr('class', 'dist2-bars');
-  const medianG   = g.append('g').attr('class', 'median-line');
+  const divLinesG  = g.append('g').attr('class', 'div-lines');
+  const medianG    = g.append('g').attr('class', 'median-line');
   const averageG  = g.append('g').attr('class', 'average-line');
   const linesG    = g.append('g').attr('class', 'cand-lines');
   const handlesG  = g.append('g').attr('class', 'dist-handles');
@@ -556,6 +601,18 @@
     .on('end', function() {
       activeDistKey  = null;
       distDragYScale = null;
+      update();
+    });
+
+  const divLineDrag = d3.drag()
+    .on('drag', function(event, d) {
+      const snapped = Math.max(1.5, Math.min(99.5, Math.floor(xScale.invert(event.x)) + 0.5));
+      divLines[d.i] = snapped;
+      const slider = document.getElementById(`divline-${d.i}`);
+      if (slider) {
+        slider.value = snapped;
+        document.getElementById(`divline-${d.i}-val`).textContent = snapped;
+      }
       update();
     });
 
@@ -643,6 +700,29 @@
       });
 
     groups.exit().remove();
+
+    // Party dividing lines
+    const divLineData = numParties >= 2 ? divLines.map((pos, i) => ({ pos, i })) : [];
+    const dlGroups = divLinesG.selectAll('g.div-line').data(divLineData, d => d.i);
+    const dlEnter = dlGroups.enter().append('g').attr('class', 'div-line')
+      .style('cursor', 'ew-resize')
+      .call(divLineDrag);
+    dlEnter.append('rect').attr('class', 'dl-handle')
+      .attr('y', 0).attr('width', 12).attr('height', chartH).attr('fill', 'transparent');
+    dlEnter.append('line').attr('y1', 0).attr('y2', chartH)
+      .attr('stroke', '#999').attr('stroke-width', 1).attr('stroke-dasharray', '4,3')
+      .attr('pointer-events', 'none');
+    dlEnter.append('text').attr('text-anchor', 'middle').attr('font-size', '9px').attr('fill', '#888')
+      .attr('pointer-events', 'none');
+    const dlMerged = dlEnter.merge(dlGroups);
+    dlMerged.each(function(d) {
+      const x = xScale(d.pos);
+      d3.select(this).select('rect.dl-handle').attr('x', x - 6);
+      d3.select(this).select('line').attr('x1', x).attr('x2', x);
+      d3.select(this).select('text').attr('x', x).attr('y', chartH - 4)
+        .text(`${d.i + 1}|${d.i + 2}`);
+    });
+    dlGroups.exit().remove();
 
     // Median and average voter lines
     const total = totals.reduce((a, b) => a + b, 0);
@@ -961,10 +1041,17 @@
   // candidates are at half-integers and voters at integers).
   // Returns array of { ranking: "A > B > C > D", count } in left-to-right order
   // of first appearance (voter position 1 → 100).
+  // Returns party number (1-indexed) for a voter at position v, based on dividing lines
+  function getVoterParty(v) {
+    let party = 1;
+    for (const line of divLines) { if (v > line) party++; else break; }
+    return party;
+  }
+
   function computeRankings(totals, candidates) {
     const seen = new Map(); // ranking string → count
     const order = [];       // insertion order
-    const usePartyRanking = !allowLeakage && candidates.some(c => c.party != null);
+    const usePartyRanking = !allowLeakage && numParties >= 2 && candidates.some(c => c.party != null);
 
     for (let i = 0; i < 100; i++) {
       const count = totals[i];
@@ -974,8 +1061,7 @@
 
       let ranked;
       if (usePartyRanking) {
-        // Voter's party = party of the closest candidate
-        const voterParty = withDist.reduce((a, b) => a.dist < b.dist ? a : b).party;
+        const voterParty = getVoterParty(v);
         const ownParty   = withDist.filter(c => c.party === voterParty).sort((a, b) => a.dist - b.dist);
         const otherParty = withDist.filter(c => c.party !== voterParty).sort((a, b) => a.dist - b.dist);
         ranked = [...ownParty, ...otherParty].map(c => c.label).join(' > ');
@@ -1088,6 +1174,10 @@
       allowLeakage = cfg.allowLeakage ?? true;
       setSlider('num-parties', numParties);
       document.getElementById('allow-leakage').checked = allowLeakage;
+      const expectedLines = Math.max(0, numParties - 1);
+      divLines = Array.isArray(cfg.divLines) && cfg.divLines.length === expectedLines
+        ? cfg.divLines.slice() : Array.from({length: expectedLines}, (_, k) => defaultDivLine(k + 1, numParties));
+      rebuildDivLines(numParties);
       rebuildCandSliders(n);
 
       if (cfg.seats != null) setSlider('seats', cfg.seats);
@@ -1186,6 +1276,7 @@
         ],
         candidates: candidates.map(c => c.pos),
         numParties,
+        divLines: numParties >= 2 ? divLines.slice() : [],
         candParties: numParties > 0 ? candidates.map(c => c.party) : [],
         allowLeakage,
         seats,
@@ -1212,6 +1303,7 @@
   document.getElementById('show-average').addEventListener('change', update);
 
   // Initial render
+  rebuildDivLines(0);
   rebuildCandSliders(4);
   update();
 </script>
