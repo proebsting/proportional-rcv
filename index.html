@@ -36,12 +36,18 @@
     .cand-row input[type=range] { width: 100%; }
     .cand-row .val { font-size: 0.85em; text-align: right; font-variant-numeric: tabular-nums; }
     .cand-row.disabled label, .cand-row.disabled input[type=range], .cand-row.disabled .val { opacity: 0.35; }
+    .cand-row.with-party { grid-template-columns: 16px 38px 28px 1fr 50px; }
+    .party-select {
+      font-size: 0.8em; width: 38px; padding: 1px 2px;
+      border: 1px solid #bbb; border-radius: 3px; background: #fafafa;
+    }
     #cand-axis {
       display: grid;
       grid-template-columns: 16px 28px 1fr 50px;
       gap: 0 8px;
       margin-top: 2px;
     }
+    #cand-axis.with-party { grid-template-columns: 16px 38px 28px 1fr 50px; }
     #cand-axis-ticks {
       display: flex;
       justify-content: space-between;
@@ -232,6 +238,10 @@
     <label>Number of candidates</label>
     <input type="range" id="num-candidates" min="1" max="26" step="1" value="4">
     <span class="val" id="num-candidates-val">4</span>
+
+    <label>Number of parties</label>
+    <input type="range" id="num-parties" min="0" max="10" step="1" value="0">
+    <span class="val" id="num-parties-val">0</span>
   </div>
   <div id="cand-slider-rows"></div>
   <div id="cand-axis">
@@ -335,31 +345,59 @@
     return Math.max(0.5, Math.min(99.5, snapped));
   }
 
-  // Rebuild the candidate slider rows when numCandidates changes.
-  // Preserves existing positions and enabled states where possible.
+  // Rebuild the candidate slider rows when numCandidates or numParties changes.
+  // Preserves existing positions, enabled states, and party assignments where possible.
   let candPositions = [20.5, 40.5, 60.5, 80.5]; // starts at default 4
   let candEnabled   = [true, true, true, true];
+  let candParties   = [1, 1, 1, 1];
+  let numParties    = 0;
 
   function rebuildCandSliders(n) {
-    // Extend or trim saved positions and enabled flags
+    // Extend or trim saved arrays
     while (candPositions.length < n) {
       const i = candPositions.length;
       candPositions.push(defaultCandPos(i, n));
       candEnabled.push(true);
+      candParties.push(1);
     }
     candPositions = candPositions.slice(0, n);
     candEnabled   = candEnabled.slice(0, n);
+    candParties   = candParties.slice(0, n);
+
+    // Clamp party assignments to current numParties
+    if (numParties > 0) {
+      candParties = candParties.map(p => Math.max(1, Math.min(numParties, p)));
+    }
+
+    const withParty = numParties > 0;
+    const axisEl = document.getElementById('cand-axis');
+    axisEl.className = withParty ? 'with-party' : '';
+    // Keep axis divs in sync with row column count
+    axisEl.innerHTML = withParty
+      ? `<div></div><div></div><div></div><div id="cand-axis-ticks"><span>1</span><span>25</span><span>50</span><span>75</span><span>100</span></div><div></div>`
+      : `<div></div><div></div><div id="cand-axis-ticks"><span>1</span><span>25</span><span>50</span><span>75</span><span>100</span></div><div></div>`;
 
     const container = document.getElementById('cand-slider-rows');
     container.innerHTML = '';
     for (let i = 0; i < n; i++) {
-      const label = String.fromCharCode(65 + i); // A, B, C...
+      const label   = String.fromCharCode(65 + i);
       const pos     = candPositions[i];
       const enabled = candEnabled[i];
+      const party   = candParties[i];
+
+      const partyHTML = withParty
+        ? `<select class="party-select" id="c${i}-party">
+            ${Array.from({length: numParties}, (_, p) =>
+              `<option value="${p+1}" ${party === p+1 ? 'selected' : ''}>${p+1}</option>`
+            ).join('')}
+           </select>`
+        : '';
+
       const row = document.createElement('div');
-      row.className = 'cand-row' + (enabled ? '' : ' disabled');
+      row.className = 'cand-row' + (withParty ? ' with-party' : '') + (enabled ? '' : ' disabled');
       row.innerHTML = `
         <input type="checkbox" id="c${i}-enabled" ${enabled ? 'checked' : ''} title="Include candidate ${label}">
+        ${partyHTML}
         <label>${label}</label>
         <input type="range" id="c${i}-pos" min="0.5" max="99.5" step="1" value="${pos}" ${enabled ? '' : 'disabled'}>
         <span class="val" id="c${i}-pos-val">${pos}</span>`;
@@ -367,7 +405,7 @@
 
       row.querySelector(`#c${i}-enabled`).addEventListener('change', function() {
         candEnabled[i] = this.checked;
-        row.className = 'cand-row' + (this.checked ? '' : ' disabled');
+        row.className = 'cand-row' + (withParty ? ' with-party' : '') + (this.checked ? '' : ' disabled');
         row.querySelector(`#c${i}-pos`).disabled = !this.checked;
         update();
       });
@@ -376,12 +414,25 @@
         document.getElementById(`c${i}-pos-val`).textContent = this.value;
         update();
       });
+      if (withParty) {
+        row.querySelector(`#c${i}-party`).addEventListener('change', function() {
+          candParties[i] = +this.value;
+          update();
+        });
+      }
     }
   }
 
   document.getElementById('num-candidates').addEventListener('input', function() {
     document.getElementById('num-candidates-val').textContent = this.value;
     rebuildCandSliders(+this.value);
+    update();
+  });
+
+  document.getElementById('num-parties').addEventListener('input', function() {
+    numParties = +this.value;
+    document.getElementById('num-parties-val').textContent = this.value;
+    rebuildCandSliders(+document.getElementById('num-candidates').value);
     update();
   });
 
@@ -425,9 +476,9 @@
         sd:   +document.getElementById('d2-sd').value,
         n:    +document.getElementById('d2-n').value,
       },
-      // Each entry: { pos, label, origIdx } — only enabled candidates
+      // Each entry: { pos, label, origIdx, party } — only enabled candidates
       candidates: candPositions.slice(0, n)
-        .map((pos, i) => ({ pos, label: CAND_LABELS[i], origIdx: i }))
+        .map((pos, i) => ({ pos, label: CAND_LABELS[i], origIdx: i, party: numParties > 0 ? candParties[i] : null }))
         .filter((_, i) => candEnabled[i]),
     };
   }
@@ -547,7 +598,7 @@
 
     // Per-candidate data keyed by origIdx so D3 tracks identity across redraws
     const candData = candidates.map(c => ({
-      pos: c.pos, idx: c.origIdx, label: c.label, win: elected && elected.has(c.label),
+      pos: c.pos, idx: c.origIdx, label: c.label, party: c.party, win: elected && elected.has(c.label),
     }));
 
     // Candidate groups: each holds a wide transparent drag handle, a visible line, and a label
@@ -576,7 +627,10 @@
     merged.select('text.cand-label')
       .attr('x', d => xScale(d.pos))
       .attr('fill', d => d.win ? '#1a7a1a' : '#c00')
-      .text(d => d.win ? `${d.label} ✓` : `${d.label} ✗`);
+      .text(d => {
+        const base = d.party != null ? `${d.label}(${d.party})` : d.label;
+        return d.win ? `${base} ✓` : `${base} ✗`;
+      });
 
     groups.exit().remove();
 
@@ -1010,6 +1064,9 @@
       document.getElementById('num-candidates-val').textContent = n;
       candPositions = cfg.candidates.map(p => Math.max(0.5, Math.min(99.5, p)));
       candEnabled   = cfg.candidates.map(() => true);
+      numParties    = cfg.numParties ?? 0;
+      candParties   = cfg.candParties?.length === n ? cfg.candParties.slice() : cfg.candidates.map(() => 1);
+      setSlider('num-parties', numParties);
       rebuildCandSliders(n);
 
       if (cfg.seats != null) setSlider('seats', cfg.seats);
@@ -1107,6 +1164,8 @@
           { mean: d2.mean, sd: d2.sd, n: d2.n },
         ],
         candidates: candidates.map(c => c.pos),
+        numParties,
+        candParties: numParties > 0 ? candidates.map(c => c.party) : [],
         seats,
       },
       votersByPosition,
