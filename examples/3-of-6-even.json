@@ -1,0 +1,3069 @@
+{
+  "config": {
+    "distributions": [
+      {
+        "mean": 30,
+        "sd": 12,
+        "n": 1000
+      },
+      {
+        "mean": 70,
+        "sd": 12,
+        "n": 2000
+      }
+    ],
+    "candidates": [
+      20.5,
+      28.5,
+      38.5,
+      52.5,
+      66.5,
+      82.5
+    ],
+    "seats": 3
+  },
+  "votersByPosition": [
+    {
+      "position": 1,
+      "dist1": 2,
+      "dist2": 0,
+      "total": 2,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 2,
+      "dist1": 2,
+      "dist2": 0,
+      "total": 2,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 3,
+      "dist1": 3,
+      "dist2": 0,
+      "total": 3,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 4,
+      "dist1": 3,
+      "dist2": 0,
+      "total": 3,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 5,
+      "dist1": 4,
+      "dist2": 0,
+      "total": 4,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 6,
+      "dist1": 5,
+      "dist2": 0,
+      "total": 5,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 7,
+      "dist1": 5,
+      "dist2": 0,
+      "total": 5,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 8,
+      "dist1": 6,
+      "dist2": 0,
+      "total": 6,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 9,
+      "dist1": 7,
+      "dist2": 0,
+      "total": 7,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 10,
+      "dist1": 8,
+      "dist2": 0,
+      "total": 8,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 11,
+      "dist1": 10,
+      "dist2": 0,
+      "total": 10,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 12,
+      "dist1": 11,
+      "dist2": 0,
+      "total": 11,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 13,
+      "dist1": 12,
+      "dist2": 0,
+      "total": 12,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 14,
+      "dist1": 14,
+      "dist2": 0,
+      "total": 14,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 15,
+      "dist1": 15,
+      "dist2": 0,
+      "total": 15,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 16,
+      "dist1": 17,
+      "dist2": 0,
+      "total": 17,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 17,
+      "dist1": 19,
+      "dist2": 0,
+      "total": 19,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 18,
+      "dist1": 20,
+      "dist2": 0,
+      "total": 20,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 19,
+      "dist1": 22,
+      "dist2": 0,
+      "total": 22,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 20,
+      "dist1": 24,
+      "dist2": 0,
+      "total": 24,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 21,
+      "dist1": 25,
+      "dist2": 0,
+      "total": 25,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 22,
+      "dist1": 27,
+      "dist2": 0,
+      "total": 27,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 23,
+      "dist1": 28,
+      "dist2": 0,
+      "total": 28,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 24,
+      "dist1": 30,
+      "dist2": 0,
+      "total": 30,
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 25,
+      "dist1": 31,
+      "dist2": 0,
+      "total": 31,
+      "ranking": [
+        "B",
+        "A",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 26,
+      "dist1": 32,
+      "dist2": 0,
+      "total": 32,
+      "ranking": [
+        "B",
+        "A",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 27,
+      "dist1": 32,
+      "dist2": 0,
+      "total": 32,
+      "ranking": [
+        "B",
+        "A",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 28,
+      "dist1": 33,
+      "dist2": 0,
+      "total": 33,
+      "ranking": [
+        "B",
+        "A",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 29,
+      "dist1": 33,
+      "dist2": 0,
+      "total": 33,
+      "ranking": [
+        "B",
+        "A",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 30,
+      "dist1": 34,
+      "dist2": 0,
+      "total": 34,
+      "ranking": [
+        "B",
+        "C",
+        "A",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 31,
+      "dist1": 33,
+      "dist2": 0,
+      "total": 33,
+      "ranking": [
+        "B",
+        "C",
+        "A",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 32,
+      "dist1": 33,
+      "dist2": 0,
+      "total": 33,
+      "ranking": [
+        "B",
+        "C",
+        "A",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 33,
+      "dist1": 32,
+      "dist2": 1,
+      "total": 33,
+      "ranking": [
+        "B",
+        "C",
+        "A",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 34,
+      "dist1": 32,
+      "dist2": 1,
+      "total": 33,
+      "ranking": [
+        "C",
+        "B",
+        "A",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 35,
+      "dist1": 31,
+      "dist2": 1,
+      "total": 32,
+      "ranking": [
+        "C",
+        "B",
+        "A",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 36,
+      "dist1": 30,
+      "dist2": 1,
+      "total": 31,
+      "ranking": [
+        "C",
+        "B",
+        "A",
+        "D",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 37,
+      "dist1": 28,
+      "dist2": 2,
+      "total": 30,
+      "ranking": [
+        "C",
+        "B",
+        "D",
+        "A",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 38,
+      "dist1": 27,
+      "dist2": 2,
+      "total": 29,
+      "ranking": [
+        "C",
+        "B",
+        "D",
+        "A",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 39,
+      "dist1": 25,
+      "dist2": 2,
+      "total": 27,
+      "ranking": [
+        "C",
+        "B",
+        "D",
+        "A",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 40,
+      "dist1": 24,
+      "dist2": 3,
+      "total": 27,
+      "ranking": [
+        "C",
+        "B",
+        "D",
+        "A",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 41,
+      "dist1": 22,
+      "dist2": 4,
+      "total": 26,
+      "ranking": [
+        "C",
+        "D",
+        "B",
+        "A",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 42,
+      "dist1": 20,
+      "dist2": 4,
+      "total": 24,
+      "ranking": [
+        "C",
+        "D",
+        "B",
+        "A",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 43,
+      "dist1": 19,
+      "dist2": 5,
+      "total": 24,
+      "ranking": [
+        "C",
+        "D",
+        "B",
+        "A",
+        "E",
+        "F"
+      ]
+    },
+    {
+      "position": 44,
+      "dist1": 17,
+      "dist2": 6,
+      "total": 23,
+      "ranking": [
+        "C",
+        "D",
+        "B",
+        "E",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 45,
+      "dist1": 15,
+      "dist2": 8,
+      "total": 23,
+      "ranking": [
+        "C",
+        "D",
+        "B",
+        "E",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 46,
+      "dist1": 14,
+      "dist2": 9,
+      "total": 23,
+      "ranking": [
+        "D",
+        "C",
+        "B",
+        "E",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 47,
+      "dist1": 12,
+      "dist2": 11,
+      "total": 23,
+      "ranking": [
+        "D",
+        "C",
+        "B",
+        "E",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 48,
+      "dist1": 11,
+      "dist2": 12,
+      "total": 23,
+      "ranking": [
+        "D",
+        "C",
+        "E",
+        "B",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 49,
+      "dist1": 10,
+      "dist2": 14,
+      "total": 24,
+      "ranking": [
+        "D",
+        "C",
+        "E",
+        "B",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 50,
+      "dist1": 8,
+      "dist2": 17,
+      "total": 25,
+      "ranking": [
+        "D",
+        "C",
+        "E",
+        "B",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 51,
+      "dist1": 7,
+      "dist2": 19,
+      "total": 26,
+      "ranking": [
+        "D",
+        "C",
+        "E",
+        "B",
+        "A",
+        "F"
+      ]
+    },
+    {
+      "position": 52,
+      "dist1": 6,
+      "dist2": 22,
+      "total": 28,
+      "ranking": [
+        "D",
+        "C",
+        "E",
+        "B",
+        "F",
+        "A"
+      ]
+    },
+    {
+      "position": 53,
+      "dist1": 5,
+      "dist2": 25,
+      "total": 30,
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "B",
+        "F",
+        "A"
+      ]
+    },
+    {
+      "position": 54,
+      "dist1": 5,
+      "dist2": 28,
+      "total": 33,
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "B",
+        "F",
+        "A"
+      ]
+    },
+    {
+      "position": 55,
+      "dist1": 4,
+      "dist2": 31,
+      "total": 35,
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "B",
+        "F",
+        "A"
+      ]
+    },
+    {
+      "position": 56,
+      "dist1": 3,
+      "dist2": 34,
+      "total": 37,
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "F",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 57,
+      "dist1": 3,
+      "dist2": 37,
+      "total": 40,
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "F",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 58,
+      "dist1": 2,
+      "dist2": 41,
+      "total": 43,
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "F",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 59,
+      "dist1": 2,
+      "dist2": 44,
+      "total": 46,
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "F",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 60,
+      "dist1": 1,
+      "dist2": 47,
+      "total": 48,
+      "ranking": [
+        "E",
+        "D",
+        "C",
+        "F",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 61,
+      "dist1": 1,
+      "dist2": 50,
+      "total": 51,
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 62,
+      "dist1": 1,
+      "dist2": 54,
+      "total": 55,
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 63,
+      "dist1": 1,
+      "dist2": 56,
+      "total": 57,
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 64,
+      "dist1": 1,
+      "dist2": 59,
+      "total": 60,
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 65,
+      "dist1": 1,
+      "dist2": 61,
+      "total": 62,
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 66,
+      "dist1": 0,
+      "dist2": 63,
+      "total": 63,
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 67,
+      "dist1": 0,
+      "dist2": 65,
+      "total": 65,
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 68,
+      "dist1": 0,
+      "dist2": 66,
+      "total": 66,
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 69,
+      "dist1": 0,
+      "dist2": 67,
+      "total": 67,
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 70,
+      "dist1": 0,
+      "dist2": 67,
+      "total": 67,
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 71,
+      "dist1": 0,
+      "dist2": 67,
+      "total": 67,
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 72,
+      "dist1": 0,
+      "dist2": 66,
+      "total": 66,
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 73,
+      "dist1": 0,
+      "dist2": 65,
+      "total": 65,
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 74,
+      "dist1": 0,
+      "dist2": 63,
+      "total": 63,
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 75,
+      "dist1": 0,
+      "dist2": 61,
+      "total": 61,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 76,
+      "dist1": 0,
+      "dist2": 59,
+      "total": 59,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 77,
+      "dist1": 0,
+      "dist2": 56,
+      "total": 56,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 78,
+      "dist1": 0,
+      "dist2": 54,
+      "total": 54,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 79,
+      "dist1": 0,
+      "dist2": 50,
+      "total": 50,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 80,
+      "dist1": 0,
+      "dist2": 47,
+      "total": 47,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 81,
+      "dist1": 0,
+      "dist2": 44,
+      "total": 44,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 82,
+      "dist1": 0,
+      "dist2": 41,
+      "total": 41,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 83,
+      "dist1": 0,
+      "dist2": 37,
+      "total": 37,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 84,
+      "dist1": 0,
+      "dist2": 34,
+      "total": 34,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 85,
+      "dist1": 0,
+      "dist2": 31,
+      "total": 31,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 86,
+      "dist1": 0,
+      "dist2": 27,
+      "total": 27,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 87,
+      "dist1": 0,
+      "dist2": 25,
+      "total": 25,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 88,
+      "dist1": 0,
+      "dist2": 22,
+      "total": 22,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 89,
+      "dist1": 0,
+      "dist2": 19,
+      "total": 19,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 90,
+      "dist1": 0,
+      "dist2": 17,
+      "total": 17,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 91,
+      "dist1": 0,
+      "dist2": 14,
+      "total": 14,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 92,
+      "dist1": 0,
+      "dist2": 12,
+      "total": 12,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 93,
+      "dist1": 0,
+      "dist2": 11,
+      "total": 11,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 94,
+      "dist1": 0,
+      "dist2": 9,
+      "total": 9,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 95,
+      "dist1": 0,
+      "dist2": 8,
+      "total": 8,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 96,
+      "dist1": 0,
+      "dist2": 6,
+      "total": 6,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 97,
+      "dist1": 0,
+      "dist2": 5,
+      "total": 5,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 98,
+      "dist1": 0,
+      "dist2": 4,
+      "total": 4,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 99,
+      "dist1": 0,
+      "dist2": 4,
+      "total": 4,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "position": 100,
+      "dist1": 0,
+      "dist2": 3,
+      "total": 3,
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ]
+    }
+  ],
+  "ballotGroups": [
+    {
+      "ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "voters": 319
+    },
+    {
+      "ranking": [
+        "B",
+        "A",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "voters": 161
+    },
+    {
+      "ranking": [
+        "B",
+        "C",
+        "A",
+        "D",
+        "E",
+        "F"
+      ],
+      "voters": 133
+    },
+    {
+      "ranking": [
+        "C",
+        "B",
+        "A",
+        "D",
+        "E",
+        "F"
+      ],
+      "voters": 96
+    },
+    {
+      "ranking": [
+        "C",
+        "B",
+        "D",
+        "A",
+        "E",
+        "F"
+      ],
+      "voters": 113
+    },
+    {
+      "ranking": [
+        "C",
+        "D",
+        "B",
+        "A",
+        "E",
+        "F"
+      ],
+      "voters": 74
+    },
+    {
+      "ranking": [
+        "C",
+        "D",
+        "B",
+        "E",
+        "A",
+        "F"
+      ],
+      "voters": 46
+    },
+    {
+      "ranking": [
+        "D",
+        "C",
+        "B",
+        "E",
+        "A",
+        "F"
+      ],
+      "voters": 46
+    },
+    {
+      "ranking": [
+        "D",
+        "C",
+        "E",
+        "B",
+        "A",
+        "F"
+      ],
+      "voters": 98
+    },
+    {
+      "ranking": [
+        "D",
+        "C",
+        "E",
+        "B",
+        "F",
+        "A"
+      ],
+      "voters": 28
+    },
+    {
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "B",
+        "F",
+        "A"
+      ],
+      "voters": 98
+    },
+    {
+      "ranking": [
+        "D",
+        "E",
+        "C",
+        "F",
+        "B",
+        "A"
+      ],
+      "voters": 166
+    },
+    {
+      "ranking": [
+        "E",
+        "D",
+        "C",
+        "F",
+        "B",
+        "A"
+      ],
+      "voters": 48
+    },
+    {
+      "ranking": [
+        "E",
+        "D",
+        "F",
+        "C",
+        "B",
+        "A"
+      ],
+      "voters": 413
+    },
+    {
+      "ranking": [
+        "E",
+        "F",
+        "D",
+        "C",
+        "B",
+        "A"
+      ],
+      "voters": 461
+    },
+    {
+      "ranking": [
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A"
+      ],
+      "voters": 700
+    }
+  ],
+  "stv": {
+    "totalVotes": 3000,
+    "quota": 751,
+    "seats": 3,
+    "elected": [
+      "E",
+      "F",
+      "D"
+    ],
+    "rounds": [
+      {
+        "round": 1,
+        "type": "elect",
+        "candidate": "E",
+        "tally": {
+          "A": 319,
+          "B": 294,
+          "C": 329,
+          "D": 436,
+          "E": 922,
+          "F": 700
+        },
+        "votes": 922,
+        "surplus": 171,
+        "transferFraction": 0.185466,
+        "ballotProgression": [
+          {
+            "ranking": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 319,
+            "votesUsed": 0,
+            "votesRemaining": 319,
+            "rankingAfter": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "A",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 161,
+            "votesUsed": 0,
+            "votesRemaining": 161,
+            "rankingAfter": [
+              "B",
+              "A",
+              "C",
+              "D",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "C",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 133,
+            "votesUsed": 0,
+            "votesRemaining": 133,
+            "rankingAfter": [
+              "B",
+              "C",
+              "A",
+              "D",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 96,
+            "votesUsed": 0,
+            "votesRemaining": 96,
+            "rankingAfter": [
+              "C",
+              "B",
+              "A",
+              "D",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "D",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 113,
+            "votesUsed": 0,
+            "votesRemaining": 113,
+            "rankingAfter": [
+              "C",
+              "B",
+              "D",
+              "A",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 74,
+            "votesUsed": 0,
+            "votesRemaining": 74,
+            "rankingAfter": [
+              "C",
+              "D",
+              "B",
+              "A",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "votesUsed": 0,
+            "votesRemaining": 46,
+            "rankingAfter": [
+              "C",
+              "D",
+              "B",
+              "A",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "votesUsed": 0,
+            "votesRemaining": 46,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "A",
+              "F"
+            ],
+            "voters": 98,
+            "votesUsed": 0,
+            "votesRemaining": 98,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A",
+              "F"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 28,
+            "votesUsed": 0,
+            "votesRemaining": 28,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "F",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 98,
+            "votesUsed": 0,
+            "votesRemaining": 98,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "F",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 166,
+            "votesUsed": 0,
+            "votesRemaining": 166,
+            "rankingAfter": [
+              "D",
+              "C",
+              "F",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 48,
+            "votesUsed": 39.0976,
+            "votesRemaining": 8.9024,
+            "rankingAfter": [
+              "D",
+              "C",
+              "F",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "F",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 413,
+            "votesUsed": 336.4024,
+            "votesRemaining": 76.5976,
+            "rankingAfter": [
+              "D",
+              "F",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "F",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 461,
+            "votesUsed": 375.5,
+            "votesRemaining": 85.5,
+            "rankingAfter": [
+              "F",
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "F",
+              "E",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 700,
+            "votesUsed": 0,
+            "votesRemaining": 700,
+            "rankingAfter": [
+              "F",
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "type": "elect",
+        "candidate": "F",
+        "tally": {
+          "A": 319,
+          "B": 294,
+          "C": 329,
+          "D": 521.5,
+          "F": 785.5
+        },
+        "votes": 785.5,
+        "surplus": 34.5,
+        "transferFraction": 0.043921,
+        "ballotProgression": [
+          {
+            "ranking": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 319,
+            "votesUsed": 0,
+            "votesRemaining": 319,
+            "rankingAfter": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "A",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 161,
+            "votesUsed": 0,
+            "votesRemaining": 161,
+            "rankingAfter": [
+              "B",
+              "A",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "C",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 133,
+            "votesUsed": 0,
+            "votesRemaining": 133,
+            "rankingAfter": [
+              "B",
+              "C",
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 96,
+            "votesUsed": 0,
+            "votesRemaining": 96,
+            "rankingAfter": [
+              "C",
+              "B",
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "D",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 113,
+            "votesUsed": 0,
+            "votesRemaining": 113,
+            "rankingAfter": [
+              "C",
+              "B",
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 74,
+            "votesUsed": 0,
+            "votesRemaining": 74,
+            "rankingAfter": [
+              "C",
+              "D",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "votesUsed": 0,
+            "votesRemaining": 46,
+            "rankingAfter": [
+              "C",
+              "D",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "votesUsed": 0,
+            "votesRemaining": 46,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "A",
+              "F"
+            ],
+            "voters": 98,
+            "votesUsed": 0,
+            "votesRemaining": 98,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 28,
+            "votesUsed": 0,
+            "votesRemaining": 28,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 98,
+            "votesUsed": 0,
+            "votesRemaining": 98,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 166,
+            "votesUsed": 0,
+            "votesRemaining": 166,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 8.9024,
+            "votesUsed": 0,
+            "votesRemaining": 8.9024,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "F",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 76.5976,
+            "votesUsed": 0,
+            "votesRemaining": 76.5976,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "F",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 85.5,
+            "votesUsed": 81.7447,
+            "votesRemaining": 3.7553,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "F",
+              "E",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 700,
+            "votesUsed": 669.2553,
+            "votesRemaining": 30.7447,
+            "rankingAfter": [
+              "D",
+              "C",
+              "B",
+              "A"
+            ]
+          }
+        ]
+      },
+      {
+        "round": 3,
+        "type": "eliminate",
+        "candidate": "B",
+        "tally": {
+          "A": 319,
+          "B": 294,
+          "C": 329,
+          "D": 556
+        },
+        "votes": 294,
+        "ballotProgression": [
+          {
+            "ranking": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 319,
+            "rankingAfter": [
+              "A",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "A",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 161,
+            "rankingAfter": [
+              "A",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "C",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 133,
+            "rankingAfter": [
+              "C",
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 96,
+            "rankingAfter": [
+              "C",
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "D",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 113,
+            "rankingAfter": [
+              "C",
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 74,
+            "rankingAfter": [
+              "C",
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "rankingAfter": [
+              "C",
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "A",
+              "F"
+            ],
+            "voters": 98,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 28,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 98,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 166,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 8.9024,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "F",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 76.5976,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "F",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 3.7553,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "F",
+              "E",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 30.7447,
+            "rankingAfter": [
+              "D",
+              "C",
+              "A"
+            ]
+          }
+        ]
+      },
+      {
+        "round": 4,
+        "type": "eliminate",
+        "candidate": "C",
+        "tally": {
+          "A": 480,
+          "C": 462,
+          "D": 556
+        },
+        "votes": 462,
+        "ballotProgression": [
+          {
+            "ranking": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 319,
+            "rankingAfter": [
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "A",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 161,
+            "rankingAfter": [
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "C",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 133,
+            "rankingAfter": [
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 96,
+            "rankingAfter": [
+              "A",
+              "D"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "D",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 113,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 74,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "A",
+              "F"
+            ],
+            "voters": 98,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 28,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 98,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 166,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 8.9024,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "F",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 76.5976,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "F",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 3.7553,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "F",
+              "E",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 30.7447,
+            "rankingAfter": [
+              "D",
+              "A"
+            ]
+          }
+        ]
+      },
+      {
+        "round": 5,
+        "type": "elect",
+        "candidate": "D",
+        "tally": {
+          "A": 709,
+          "D": 789
+        },
+        "votes": 789,
+        "surplus": 38,
+        "transferFraction": 0.048162,
+        "ballotProgression": [
+          {
+            "ranking": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 319,
+            "votesUsed": 0,
+            "votesRemaining": 319,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "A",
+              "C",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 161,
+            "votesUsed": 0,
+            "votesRemaining": 161,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "B",
+              "C",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 133,
+            "votesUsed": 0,
+            "votesRemaining": 133,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "A",
+              "D",
+              "E",
+              "F"
+            ],
+            "voters": 96,
+            "votesUsed": 0,
+            "votesRemaining": 96,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "B",
+              "D",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 113,
+            "votesUsed": 107.5577,
+            "votesRemaining": 5.4423,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "A",
+              "E",
+              "F"
+            ],
+            "voters": 74,
+            "votesUsed": 70.436,
+            "votesRemaining": 3.564,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "C",
+              "D",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "votesUsed": 43.7845,
+            "votesRemaining": 2.2155,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "B",
+              "E",
+              "A",
+              "F"
+            ],
+            "voters": 46,
+            "votesUsed": 43.7845,
+            "votesRemaining": 2.2155,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "A",
+              "F"
+            ],
+            "voters": 98,
+            "votesUsed": 93.2801,
+            "votesRemaining": 4.7199,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "C",
+              "E",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 28,
+            "votesUsed": 26.6515,
+            "votesRemaining": 1.3485,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "B",
+              "F",
+              "A"
+            ],
+            "voters": 98,
+            "votesUsed": 93.2801,
+            "votesRemaining": 4.7199,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "D",
+              "E",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 166,
+            "votesUsed": 158.0051,
+            "votesRemaining": 7.9949,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "C",
+              "F",
+              "B",
+              "A"
+            ],
+            "voters": 8.9024,
+            "votesUsed": 8.4736,
+            "votesRemaining": 0.4288,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "D",
+              "F",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 76.5976,
+            "votesUsed": 72.9085,
+            "votesRemaining": 3.6891,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "E",
+              "F",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 3.7553,
+            "votesUsed": 3.5744,
+            "votesRemaining": 0.1809,
+            "rankingAfter": [
+              "A"
+            ]
+          },
+          {
+            "ranking": [
+              "F",
+              "E",
+              "D",
+              "C",
+              "B",
+              "A"
+            ],
+            "voters": 30.7447,
+            "votesUsed": 29.264,
+            "votesRemaining": 1.4807,
+            "rankingAfter": [
+              "A"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
