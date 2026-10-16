@@ -169,11 +169,19 @@
       border: 1px solid #aaa; border-radius: 4px; background: #f5f5f5;
     }
     .toolbar button:hover, .toolbar label.btn:hover { background: #e8e8e8; }
+    #example-select { padding: 5px 8px; font-size: 0.9em; border: 1px solid #aaa; border-radius: 4px; background: #f5f5f5; }
     #upload-error { font-size: 0.85em; color: #b00; }
+    #load-notice { font-size: 0.85em; color: #5c4400; }
     .stv-progression th, .stv-progression td { white-space: nowrap; }
     .stv-progression th.prog-elect { background: #e8f5e9; color: #1a5c1a; border-left: 2px solid #a5d6a7; }
     .stv-progression th.prog-elim  { background: #ffebee; color: #7f0000; border-left: 2px solid #ef9a9a; }
     .stv-progression td { border-left: 1px solid #eee; }
+    .stv-invalid {
+      margin: 0 0 14px; padding: 8px 12px; border: 1px solid #e0a800; border-radius: 4px;
+      background: #fff8e1; color: #5c4400; font-size: 0.95em; line-height: 1.5;
+    }
+    .stv-invalid ul { margin: 4px 0; padding-left: 20px; }
+    #download-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .section-desc { font-size: 0.88em; color: #555; margin: 0 0 12px; line-height: 1.5; }
   </style>
 </head>
@@ -184,20 +192,25 @@
 <p style="font-size:0.92em; line-height:1.6; max-width:720px; margin-bottom:20px;">
   This demo simulates a <strong>Single Transferable Vote</strong> election on a simplified one-dimensional political spectrum (positions 1–100).
   Voters are modeled as two normal distributions along that spectrum; each voter ranks all candidates in order of proximity to their own position.
-  STV then fills the available seats through successive rounds of quota-based election and elimination, transferring surplus or exhausted votes until all seats are filled.
+  STV then fills the available seats through successive rounds of quota-based election and elimination, transferring surplus votes and the votes of eliminated candidates until all seats are filled.
+  There are no tie-break rules: any configuration that produces a tie (in a voter's ranking or in the count) is reported as invalid instead of being resolved.
   Adjust the distributions and candidate positions below and watch the results update in real time.
 </p>
 
 <div class="toolbar">
+  <select id="example-select" title="Load a built-in example">
+    <option value="">Load example…</option>
+  </select>
   <label class="btn" for="upload-input">⬆ Upload config</label>
   <input type="file" id="upload-input" accept=".json" style="display:none">
   <button id="download-btn">⬇ Download results</button>
   <span id="upload-error"></span>
+  <span id="load-notice"></span>
 </div>
 
 <div class="section">
   <h2>Voter Distribution 1</h2>
-  <p class="section-desc">A group of voters centered around a position on the spectrum, modeled as a normal distribution. Adjust the <strong>mean</strong> (center position), <strong>std dev</strong> (spread), and total number of <strong>voters</strong>. You can also drag the blue handle on the histogram — left/right changes the mean, up/down changes the spread.</p>
+  <p class="section-desc">A group of voters centered around a position on the spectrum, modeled as a normal distribution. Adjust the <strong>mean</strong> (center position), <strong>std dev</strong> (spread), and approximate number of <strong>voters</strong> (each position's count is rounded independently so that mirror-image distributions stay exactly symmetric). You can also drag the blue handle on the histogram — left/right changes the mean, up/down changes the spread.</p>
   <div class="param-grid">
     <label>Mean</label>
     <input type="range" id="d1-mean" min="1" max="100" step="1" value="30">
@@ -233,7 +246,7 @@
 
 <div class="section">
   <h2>Candidates</h2>
-  <p class="section-desc">Set the number of candidates (up to 26, labeled A–Z) and their positions on the spectrum. Each voter ranks candidates from nearest to farthest. Candidate positions can be adjusted with the sliders or by dragging their vertical lines directly on the histogram.</p>
+  <p class="section-desc">Set the number of candidates (up to 26, labeled A–Z) and their positions on the spectrum. Each voter ranks candidates from nearest to farthest. Candidate positions can be adjusted with the sliders or by dragging their vertical lines directly on the histogram. Candidates sit on a 2-unit grid (0.5, 2.5, 4.5, …, 100.5, symmetric about 50.5). Because every pair of candidates is an even distance apart, no voter (at an integer position) is ever exactly halfway between two candidates; two candidates at the same position make the configuration invalid.</p>
   <div class="param-grid">
     <label>Number of candidates</label>
     <input type="range" id="num-candidates" min="1" max="26" step="1" value="4">
@@ -281,13 +294,13 @@
 
 <div class="section">
   <h2>STV Results</h2>
-  <p class="section-desc">Round-by-round results of the STV count. The ballot progression table shows how each ballot group's votes are used or transferred across rounds. Each subsequent round shows either a candidate reaching the Droop quota (surplus votes transferred fractionally) or the lowest candidate being eliminated (their votes redistributed to next preferences).</p>
+  <p class="section-desc">Round-by-round results of the STV count. The ballot progression table shows how each ballot group's votes are used or transferred across rounds. Each subsequent round shows either every candidate who has reached the Droop quota being elected together (their surpluses transferred fractionally and simultaneously) or the lowest candidate being eliminated (their votes redistributed to next preferences). The count uses exact fractions; if two or more candidates are tied for lowest, the configuration is invalid.</p>
   <div id="stv-results"></div>
 </div>
 
 <div class="section">
   <h2>Ranked Ballot Distribution</h2>
-  <p class="section-desc">Every distinct ballot ranking that appears in this election and the number of voters who hold it. Voters at positions equidistant from two candidates will always have a clear nearest neighbor because candidates are placed at half-integer positions while voters are at integers.</p>
+  <p class="section-desc">Every distinct ballot ranking that appears in this election and the number of voters who hold it. Candidates a voter is equidistant from are shown joined by “=”; any such tie makes the configuration invalid.</p>
   <div id="rankings-table-wrap">
     <table id="rankings-table">
       <thead>
@@ -342,12 +355,28 @@
     update();
   });
 
-  // Default candidate position for index i of n total (evenly spaced, snapped to valid half-integers)
+  // Candidates live on the grid 0.5, 2.5, 4.5, ..., 100.5. Any two grid points are an even
+  // distance apart, so their midpoint is a half-integer and no integer-positioned voter can be
+  // equidistant from two candidates. The grid is symmetric about 50.5, the center of 1-100.
+  const CAND_MIN = 0.5, CAND_MAX = 100.5;
+  const clampCand = x => Math.max(CAND_MIN, Math.min(CAND_MAX, x));
+  const onGrid = x => (x - CAND_MIN) % 2 === 0;
+
+  // Nearest grid point (for drags and defaults)
+  function snapToGrid(x) {
+    return clampCand(CAND_MIN + 2 * Math.round((x - CAND_MIN) / 2));
+  }
+
+  // Grid point for an off-grid loaded position: always moves toward the center (50.5), so a
+  // symmetric configuration stays symmetric
+  function snapTowardCenter(x) {
+    const k = (x - CAND_MIN) / 2;
+    return clampCand(CAND_MIN + 2 * (x < 50.5 ? Math.ceil(k) : Math.floor(k)));
+  }
+
+  // Default candidate position for index i of n total (evenly spaced, snapped to the grid)
   function defaultCandPos(i, n) {
-    const raw = (i + 1) / (n + 1) * 100;
-    // Snap to nearest valid position (0.5, 1.5, 2.5, ..., 99.5)
-    const snapped = Math.floor(raw) + 0.5;
-    return Math.max(0.5, Math.min(99.5, snapped));
+    return snapToGrid((i + 1) / (n + 1) * 100);
   }
 
   // Rebuild the candidate slider rows when numCandidates or numParties changes.
@@ -404,7 +433,7 @@
         <input type="checkbox" id="c${i}-enabled" ${enabled ? 'checked' : ''} title="Include candidate ${label}">
         ${partyHTML}
         <label>${label}</label>
-        <input type="range" id="c${i}-pos" min="0.5" max="99.5" step="1" value="${pos}" ${enabled ? '' : 'disabled'}>
+        <input type="range" id="c${i}-pos" min="${CAND_MIN}" max="${CAND_MAX}" step="2" value="${pos}" ${enabled ? '' : 'disabled'}>
         <span class="val" id="c${i}-pos-val">${pos}</span>`;
       container.appendChild(row);
 
@@ -495,26 +524,17 @@
     return Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI));
   }
 
-  // Distribute N voters across integer positions 1-100 using a normal distribution,
-  // clipped to that range. Returns array indexed 0-99 (position = index+1).
+  // Distribute approximately N voters across integer positions 1-100 using a normal
+  // distribution, clipped to that range. Returns array indexed 0-99 (position = index+1).
+  // Each position is rounded independently (no largest-remainder allocation, which would
+  // need a tie-break among equal remainders), so the total may differ slightly from N.
+  // Summing in sorted order makes the normalization identical for mirror-image
+  // distributions, so they produce exactly mirrored counts.
   function distributeVoters(mean, sd, n) {
     const raw = [];
-    let sum = 0;
-    for (let v = 1; v <= 100; v++) {
-      const p = normalPDF(v, mean, sd);
-      raw.push(p);
-      sum += p;
-    }
-    // Scale to N voters, using largest-remainder (Hamilton) method for integer counts
-    const exact = raw.map(p => (p / sum) * n);
-    const floors = exact.map(Math.floor);
-    const remainder = exact.map((e, i) => e - floors[i]);
-    let allocated = floors.reduce((a, b) => a + b, 0);
-    const needed = Math.round(n) - allocated;
-    // Award remainders to positions with largest fractional parts
-    const order = remainder.map((r, i) => [r, i]).sort((a, b) => b[0] - a[0]);
-    for (let i = 0; i < needed; i++) floors[order[i][1]]++;
-    return floors;
+    for (let v = 1; v <= 100; v++) raw.push(normalPDF(v, mean, sd));
+    const sum = [...raw].sort((a, b) => a - b).reduce((a, b) => a + b, 0);
+    return raw.map(p => Math.round((p / sum) * n));
   }
 
   function getParams() {
@@ -550,7 +570,7 @@
   const g = svg.append('g')
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
-  const xScale = d3.scaleLinear().domain([1, 100]);
+  const xScale = d3.scaleLinear().domain([CAND_MIN, CAND_MAX]);
   const yScale = d3.scaleLinear().range([chartH, 0]);
 
   const xAxisG = g.append('g').attr('transform', `translate(0,${chartH})`);
@@ -567,7 +587,7 @@
   const candDrag = d3.drag()
     .on('drag', function(event, d) {
       const raw = xScale.invert(event.x);
-      const snapped = Math.max(0.5, Math.min(99.5, Math.floor(raw) + 0.5));
+      const snapped = snapToGrid(raw);
       candPositions[d.idx] = snapped;
       const slider = document.getElementById(`c${d.idx}-pos`);
       if (slider) {
@@ -578,6 +598,7 @@
     });
 
   const DIST_COLORS = { d1: '#2a72c3', d2: '#b03a2a' };
+  const TIE_COLOR = '#d97706';
   let activeDistKey = null;
   let distDragYScale = null;  // frozen copy of yScale at drag start
 
@@ -616,8 +637,8 @@
       update();
     });
 
-  // candidates: array of positions; elected: Set of elected label strings
-  function drawHistogram(totals, counts1, counts2, candidates, elected, d1, d2) {
+  // outcome: { valid, elected: Set of labels, tied: Set of labels, tiePositions: Set of voter positions }
+  function drawHistogram(totals, counts1, counts2, candidates, outcome, d1, d2) {
     const w = chartWidth();
     svg.attr('width', w + margin.left + margin.right);
     xScale.range([0, w]);
@@ -637,7 +658,7 @@
         .attr('y',      d => yScale(d))
         .attr('width',  barW)
         .attr('height', d => chartH - yScale(d))
-        .attr('fill',   '#222')
+        .attr('fill',   (_, i) => outcome.tiePositions.has(i + 1) ? TIE_COLOR : '#222')
         .attr('opacity', barOpacity);
     bars.exit().remove();
 
@@ -665,8 +686,12 @@
 
     // Per-candidate data keyed by origIdx so D3 tracks identity across redraws
     const candData = candidates.map(c => ({
-      pos: c.pos, idx: c.origIdx, label: c.label, party: c.party, win: elected && elected.has(c.label),
+      pos: c.pos, idx: c.origIdx, label: c.label, party: c.party,
+      status: !outcome.valid ? (outcome.tied.has(c.label) ? 'tie' : 'none')
+            : outcome.elected.has(c.label) ? 'win' : 'lose',
     }));
+    const STATUS_COLOR = { win: '#1a7a1a', lose: '#c00', tie: TIE_COLOR, none: '#999' };
+    const STATUS_MARK  = { win: ' ✓', lose: ' ✗', tie: ' =', none: '' };
 
     // Candidate groups: each holds a wide transparent drag handle, a visible line, and a label
     const groups = linesG.selectAll('g.cand-group').data(candData, d => d.idx);
@@ -690,14 +715,11 @@
     merged.select('rect.cand-handle').attr('x', d => xScale(d.pos) - 6);
     merged.select('line.cand-line')
       .attr('x1', d => xScale(d.pos)).attr('x2', d => xScale(d.pos))
-      .attr('stroke', d => d.win ? '#1a7a1a' : '#c00');
+      .attr('stroke', d => STATUS_COLOR[d.status]);
     merged.select('text.cand-label')
       .attr('x', d => xScale(d.pos))
-      .attr('fill', d => d.win ? '#1a7a1a' : '#c00')
-      .text(d => {
-        const base = d.party != null ? `${d.label}(${d.party})` : d.label;
-        return d.win ? `${base} ✓` : `${base} ✗`;
-      });
+      .attr('fill', d => STATUS_COLOR[d.status])
+      .text(d => (d.party != null ? `${d.label}(${d.party})` : d.label) + STATUS_MARK[d.status]);
 
     groups.exit().remove();
 
@@ -807,128 +829,148 @@
 
   // --- STV engine ---
 
-  // Snapshot current ballot groups: collapse identical remaining-candidate prefixes,
-  // rounding weights to 4 decimal places for display.
+  // Exact rational arithmetic on BigInt numerator/denominator pairs, so that
+  // "tied" means exactly equal rather than equal within a floating-point tolerance.
+  function bigGcd(a, b) {
+    if (a < 0n) a = -a;
+    while (b) [a, b] = [b, a % b];
+    return a;
+  }
+  function Q(n, d = 1n) {
+    n = BigInt(n); d = BigInt(d);
+    if (d < 0n) { n = -n; d = -d; }
+    const g = bigGcd(n, d);
+    return { n: n / g, d: d / g };
+  }
+  const Q0 = Q(0);
+  const qadd = (a, b) => a.d === b.d ? Q(a.n + b.n, a.d) : Q(a.n * b.d + b.n * a.d, a.d * b.d);
+  const qsub = (a, b) => qadd(a, { n: -b.n, d: b.d });
+  const qmul = (a, b) => Q(a.n * b.n, a.d * b.d);
+  const qdiv = (a, b) => Q(a.n * b.d, a.d * b.n);
+  const qcmp = (a, b) => { const x = a.n * b.d - b.n * a.d; return x < 0n ? -1 : x > 0n ? 1 : 0; };
+  // Convert to a Number for display, scaling first so huge numerators/denominators don't overflow
+  function qnum(a) {
+    const SCALE = 10n ** 12n;
+    return Number((a.n * SCALE) / a.d) / 1e12;
+  }
+
+  // Snapshot current ballot groups: collapse identical remaining-candidate prefixes.
   function snapshotBallots(ballots, active) {
     const map = new Map();
     for (const b of ballots) {
-      if (b.weight < 0.0001) continue;
+      if (b.weight.n === 0n) continue;
       const key = b.prefs.filter(c => active.has(c)).join(' > ');
       if (!key) continue;
-      map.set(key, (map.get(key) || 0) + b.weight);
+      map.set(key, qadd(map.get(key) || Q0, b.weight));
     }
     // Return in insertion order (left→right, matches original ranking order)
-    return [...map.entries()].map(([ranking, weight]) => ({ ranking, weight }));
+    return [...map.entries()].map(([ranking, weight]) => ({ ranking, weight: qnum(weight) }));
   }
 
+  // Runs STV with no tie-break rules. All candidates at or above quota in a round are
+  // elected together and their surpluses transferred simultaneously, so the result does not
+  // depend on any ordering among them. If two or more candidates are tied for fewest votes,
+  // the count stops and `tie` describes it. Arithmetic is exact; the returned steps carry
+  // Numbers for display.
   function runSTV(rankingRows, seats) {
     const totalVotes = rankingRows.reduce((s, r) => s + r.count, 0);
     const quota = Math.floor(totalVotes / (seats + 1)) + 1;
+    const quotaQ = Q(quota);
 
     let ballots = rankingRows.map(r => ({
       prefs: r.ranking.split(' > '),
-      weight: r.count,
+      weight: Q(r.count),
     }));
 
     const allCands = [...new Set(rankingRows.flatMap(r => r.ranking.split(' > ')))];
     let active = new Set(allCands);
     let elected = [];
     let steps = [];
+    let tie = null;
+
+    const topOf = b => b.prefs.find(c => active.has(c));
 
     function tally() {
       const t = {};
-      for (const c of active) t[c] = 0;
+      for (const c of active) t[c] = Q0;
       for (const b of ballots) {
-        const top = b.prefs.find(c => active.has(c));
-        if (top) t[top] += b.weight;
+        const top = topOf(b);
+        if (top) t[top] = qadd(t[top], b.weight);
       }
       return t;
     }
+    const tallyNums = t => Object.fromEntries(Object.entries(t).map(([c, v]) => [c, qnum(v)]));
+
+    // Elect `winners` (candidate → transfer fraction): each ballot whose current top choice is a
+    // winner keeps `fraction` of its weight for later rounds. Records the step.
+    function electTogether(type, winners, t, extra) {
+      const perBallot = ballots.map(b => {
+        const top = topOf(b);
+        if (!winners.has(top)) return { used: 0, after: qnum(b.weight) };
+        const after = qmul(b.weight, winners.get(top));
+        const used = qsub(b.weight, after);
+        b.weight = after;
+        return { used: qnum(used), after: qnum(after) };
+      });
+      for (const c of winners.keys()) { active.delete(c); elected.push(c); }
+      perBallot.forEach((p, i) => {
+        p.rankingAfter = ballots[i].prefs.filter(c => active.has(c)).join(' > ') || '—';
+      });
+      steps.push({ type, candidates: [...winners.keys()], tally: tallyNums(t), ...extra,
+                   ballots: snapshotBallots(ballots, active), perBallot });
+    }
 
     while (elected.length < seats && active.size > 0) {
+      const t = tally();
+      // Candidates in descending order of votes (equal votes keep their order; display only)
+      const byVotes = Object.keys(t).sort((a, b) => qcmp(t[b], t[a]));
+
       // Auto-elect if remaining active candidates == remaining seats
       if (active.size <= seats - elected.length) {
-        const t = tally();
-        for (const c of [...active]) {
-          // Capture per-ballot: ballots whose effective top is c are consumed
-          const perBallot = ballots.map(b => {
-            const effectiveTop = b.prefs.find(cc => active.has(cc));
-            const isTop = effectiveTop === c;
-            return { used: isTop ? b.weight : 0, after: isTop ? 0 : b.weight };
-          });
-          // Consume those ballot weights
-          ballots.forEach((b, i) => { b.weight = perBallot[i].after; });
-          active.delete(c);
-          elected.push(c);
-          const perBallotFinal = perBallot.map((p, i) => ({
-            ...p,
-            rankingAfter: ballots[i].prefs.filter(cc => active.has(cc)).join(' > ') || '—',
-          }));
-          steps.push({ type: 'elect_remaining', candidate: c, tally: t,
-                       ballots: snapshotBallots(ballots, active), perBallot: perBallotFinal });
-        }
+        electTogether('elect_remaining', new Map(byVotes.map(c => [c, Q0])), t, {});
         break;
       }
 
-      const t = tally();
-      const atQuota = Object.entries(t)
-        .filter(([, v]) => v >= quota)
-        .sort((a, b) => b[1] - a[1]);
-
+      const atQuota = byVotes.filter(c => qcmp(t[c], quotaQ) >= 0);
       if (atQuota.length > 0) {
-        const [winner, votes] = atQuota[0];
-        const surplus = votes - quota;
-        const fraction = votes > 0 ? surplus / votes : 0;
-
-        // Capture per-ballot data BEFORE modifying weights or active
-        const perBallot = ballots.map(b => {
-          const effectiveTop = b.prefs.find(c => active.has(c));
-          const isTop = effectiveTop === winner;
-          return { used: isTop ? b.weight * (1 - fraction) : 0,
-                   after: isTop ? b.weight * fraction : b.weight };
-        });
-
-        elected.push(winner);
-        active.delete(winner);
-
-        // Fractional surplus transfer
-        for (const b of ballots) {
-          const top = b.prefs.find(c => c === winner || active.has(c));
-          if (top === winner) b.weight *= fraction;
-        }
-
-        const perBallotFinal = perBallot.map((p, i) => ({
-          ...p,
-          rankingAfter: ballots[i].prefs.filter(c => active.has(c)).join(' > ') || '—',
+        // At most (seats - elected) candidates can reach the Droop quota at once
+        const winners = new Map(atQuota.map(c => [c, qdiv(qsub(t[c], quotaQ), t[c])]));
+        const details = atQuota.map(c => ({
+          candidate: c, votes: qnum(t[c]), surplus: qnum(qsub(t[c], quotaQ)), fraction: qnum(winners.get(c)),
         }));
-        steps.push({ type: 'elect', candidate: winner, votes, surplus, fraction,
-                     tally: t, ballots: snapshotBallots(ballots, active), perBallot: perBallotFinal });
+        electTogether('elect', winners, t, { details });
       } else {
-        // Eliminate the candidate with fewest votes (ties broken alphabetically)
-        const [loser, votes] = Object.entries(t)
-          .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))[0];
+        const fewest = t[byVotes[byVotes.length - 1]];
+        const losers = byVotes.filter(c => qcmp(t[c], fewest) === 0);
+        if (losers.length > 1) {
+          tie = { round: steps.length + 1, candidates: losers.sort(), votes: qnum(fewest), tally: tallyNums(t) };
+          break;
+        }
+        const loser = losers[0];
         active.delete(loser);
         const perBallot = ballots.map(b => ({
-          weightBefore: b.weight,
+          weightBefore: qnum(b.weight),
           rankingAfter: b.prefs.filter(c => active.has(c)).join(' > ') || '—',
         }));
-        steps.push({ type: 'eliminate', candidate: loser, votes,
-                     tally: t, ballots: snapshotBallots(ballots, active), perBallot });
+        steps.push({ type: 'eliminate', candidates: [loser], votes: qnum(fewest),
+                     tally: tallyNums(t), ballots: snapshotBallots(ballots, active), perBallot });
       }
     }
 
-    return { quota, totalVotes, steps, elected };
+    return { quota, totalVotes, steps, elected, tie };
   }
 
   // --- STV rendering ---
 
   function fmt(n) { return n.toFixed(2); }
 
+  // highlight: Set of candidates acted on this round; stepType 'eliminate' | 'elect' |
+  // 'elect_remaining' | 'tie'
   function tallyTableHTML(tally, quota, highlight, stepType) {
     const rows = Object.entries(tally)
       .sort((a, b) => b[1] - a[1])
       .map(([c, v]) => {
-        const isHighlight = c === highlight;
+        const isHighlight = highlight.has(c);
         const cls = isHighlight && v >= quota ? 'quota-met' : '';
         let marker = '';
         let style = '';
@@ -936,6 +978,9 @@
           if (stepType === 'eliminate') {
             marker = '<span style="color:#b00">✗</span> ';
             style = 'text-decoration:line-through;color:#b00';
+          } else if (stepType === 'tie') {
+            marker = `<span style="color:${TIE_COLOR}">=</span> `;
+            style = `color:${TIE_COLOR};font-weight:bold`;
           } else {
             marker = '<span style="color:#1a7a1a">✓</span> ';
           }
@@ -968,10 +1013,11 @@
     steps.forEach((step, i) => {
       const rn = i + 1;
       if (step.type === 'eliminate') {
-        hdr1 += `<th colspan="1" class="prog-elim">Round ${rn}: ✗ ${step.candidate} elim.</th>`;
+        hdr1 += `<th colspan="1" class="prog-elim">Round ${rn}: ✗ ${step.candidates[0]} elim.</th>`;
         hdr2 += `<th class="prog-elim">New ranking</th>`;
       } else {
-        const lbl = step.type === 'elect_remaining' ? `✓ ${step.candidate} (auto)` : `✓ ${step.candidate} elected`;
+        const names = step.candidates.join(', ');
+        const lbl = step.type === 'elect_remaining' ? `✓ ${names} (auto)` : `✓ ${names} elected`;
         hdr1 += `<th colspan="3" class="prog-elect">Round ${rn}: ${lbl}</th>`;
         hdr2 += `<th class="prog-elect">Used</th><th class="prog-elect">Remaining</th><th class="prog-elect">New ranking</th>`;
       }
@@ -997,12 +1043,31 @@
       </table></div>`;
   }
 
-  function drawSTV(rankings, seats) {
+  function invalidHTML(text) {
+    return `<div class="stv-invalid"><strong>Invalid configuration (tie).</strong> ${text}
+      Adjust the candidates or voter distributions to remove it.</div>`;
+  }
+
+  // rankingTies: from computeRankings; stvResult: from runSTV, or null when rankings are tied
+  function drawSTV(rankings, rankingTies, stvResult, seats) {
     const container = document.getElementById('stv-results');
     if (!rankings.length) { container.innerHTML = ''; return; }
 
-    const { quota, totalVotes, steps, elected } = runSTV(rankings, seats);
-    let html = `<p><strong>Total votes:</strong> ${totalVotes} &nbsp;|&nbsp;
+    if (rankingTies.length) {
+      const items = rankingTies.map(t =>
+        `<li>Position ${t.position} (${t.count} voter${t.count === 1 ? '' : 's'}): equidistant from ${t.tied.join(' and ')}</li>`
+      ).join('');
+      container.innerHTML = invalidHTML(`Some voters are exactly equidistant from two or more candidates, so their ranking is undefined:<ul>${items}</ul>`);
+      return;
+    }
+
+    const { quota, totalVotes, steps, elected, tie } = stvResult;
+    let html = '';
+    if (tie) {
+      html += invalidHTML(`In round ${tie.round}, ${tie.candidates.join(' and ')} are tied for fewest votes
+        (${fmt(tie.votes)} each), so the candidate to eliminate is undefined.`);
+    }
+    html += `<p><strong>Total votes:</strong> ${totalVotes} &nbsp;|&nbsp;
                    <strong>Droop quota:</strong> ${quota} &nbsp;|&nbsp;
                    <strong>Seats:</strong> ${seats}</p>
                <div class="stv-round">
@@ -1013,34 +1078,39 @@
     steps.forEach((step, i) => {
       let desc = '';
       if (step.type === 'elect') {
-        desc = `<span class="stv-elected">✓ Candidate ${step.candidate} elected</span>
-                with ${fmt(step.votes)} votes &mdash;
-                surplus ${fmt(step.surplus)} transferred at fraction ${step.fraction.toFixed(4)}`;
+        desc = step.details.map(d =>
+          `<span class="stv-elected">✓ Candidate ${d.candidate} elected</span>
+           with ${fmt(d.votes)} votes &mdash;
+           surplus ${fmt(d.surplus)} transferred at fraction ${d.fraction.toFixed(4)}`
+        ).join('; ');
       } else if (step.type === 'eliminate') {
-        desc = `<span class="stv-eliminated">✗ Candidate ${step.candidate} eliminated</span>
+        desc = `<span class="stv-eliminated">✗ Candidate ${step.candidates[0]} eliminated</span>
                 with ${fmt(step.votes)} votes`;
       } else {
-        desc = `<span class="stv-elected">✓ Candidate ${step.candidate} elected</span>
-                (only remaining candidate for seat)`;
+        desc = `<span class="stv-elected">✓ Candidate${step.candidates.length > 1 ? 's' : ''} ${step.candidates.join(', ')} elected</span>
+                (only remaining candidates for the remaining seats)`;
       }
 
       html += `<div class="stv-round">
         <h3>Round ${i + 1}: ${desc}</h3>
         <div class="stv-tables">
-          ${tallyTableHTML(step.tally, quota, step.candidate, step.type)}
+          ${tallyTableHTML(step.tally, quota, new Set(step.candidates), step.type)}
           ${ballotTableHTML(step.ballots)}
         </div>
       </div>`;
     });
 
-    html += `<p class="stv-summary">Elected: ${elected.join(', ')}</p>`;
+    if (tie) {
+      html += `<div class="stv-round">
+        <h3>Round ${tie.round}: <span style="color:${TIE_COLOR}">tie for fewest votes between ${tie.candidates.join(' and ')}</span></h3>
+        <div class="stv-tables">${tallyTableHTML(tie.tally, quota, new Set(tie.candidates), 'tie')}</div>
+      </div>`;
+    } else {
+      html += `<p class="stv-summary">Elected: ${elected.join(', ')}</p>`;
+    }
     container.innerHTML = html;
   }
 
-  // For each voter position, rank candidates by proximity (no ties possible since
-  // candidates are at half-integers and voters at integers).
-  // Returns array of { ranking: "A > B > C > D", count } in left-to-right order
-  // of first appearance (voter position 1 → 100).
   // Returns party number (1-indexed) for a voter at position v, based on dividing lines
   function getVoterParty(v) {
     let party = 1;
@@ -1048,10 +1118,27 @@
     return party;
   }
 
+  // For each occupied voter position, rank candidates by proximity (own-party candidates
+  // first when leakage is disabled). Candidates the voter is equidistant from are joined
+  // with " = " and reported as ties; positions with no voters cannot produce ties.
+  // Returns { rankings: [{ ranking: "A > B > C > D", count }], ties: [{ position, count, tied }] }
+  // with rankings in left-to-right order of first appearance (voter position 1 → 100).
   function computeRankings(totals, candidates) {
     const seen = new Map(); // ranking string → count
     const order = [];       // insertion order
+    const ties = [];
     const usePartyRanking = !allowLeakage && numParties >= 2 && candidates.some(c => c.party != null);
+
+    // Sort a group by distance, splitting it into runs of equal distance
+    function runsByDistance(group) {
+      const sorted = [...group].sort((a, b) => a.dist - b.dist);
+      const runs = [];
+      for (const c of sorted) {
+        const last = runs[runs.length - 1];
+        if (last && last[0].dist === c.dist) last.push(c); else runs.push([c]);
+      }
+      return runs;
+    }
 
     for (let i = 0; i < 100; i++) {
       const count = totals[i];
@@ -1059,21 +1146,25 @@
       const v = i + 1;
       const withDist = candidates.map(c => ({ ...c, dist: Math.abs(v - c.pos) }));
 
-      let ranked;
+      let runs;
       if (usePartyRanking) {
         const voterParty = getVoterParty(v);
-        const ownParty   = withDist.filter(c => c.party === voterParty).sort((a, b) => a.dist - b.dist);
-        const otherParty = withDist.filter(c => c.party !== voterParty).sort((a, b) => a.dist - b.dist);
-        ranked = [...ownParty, ...otherParty].map(c => c.label).join(' > ');
+        runs = [...runsByDistance(withDist.filter(c => c.party === voterParty)),
+                ...runsByDistance(withDist.filter(c => c.party !== voterParty))];
       } else {
-        ranked = withDist.sort((a, b) => a.dist - b.dist).map(c => c.label).join(' > ');
+        runs = runsByDistance(withDist);
       }
+
+      for (const run of runs) {
+        if (run.length > 1) ties.push({ position: v, count, tied: run.map(c => c.label) });
+      }
+      const ranked = runs.map(run => run.map(c => c.label).join(' = ')).join(' > ');
 
       if (!seen.has(ranked)) { seen.set(ranked, 0); order.push(ranked); }
       seen.set(ranked, seen.get(ranked) + count);
     }
 
-    return order.map(r => ({ ranking: r, count: seen.get(r) }));
+    return { rankings: order.map(r => ({ ranking: r, count: seen.get(r) })), ties };
   }
 
   let lastComputed = null;
@@ -1093,14 +1184,26 @@
     }
 
     // Rankings + STV (needed before histogram so we know winners)
-    const rankings = computeRankings(totals, candidates);
+    // A tied ranking leaves the ballots undefined, so STV only runs when there are none
+    const { rankings, ties: rankingTies } = candidates.length
+      ? computeRankings(totals, candidates) : { rankings: [], ties: [] };
     const seats = +document.getElementById('seats').value;
-    const stvResult = rankings.length ? runSTV(rankings, seats) : null;
-    const elected = new Set(stvResult ? stvResult.elected : []);
+    const stvResult = rankings.length && !rankingTies.length ? runSTV(rankings, seats) : null;
+    const valid = !!stvResult && !stvResult.tie;
+    const outcome = {
+      valid,
+      elected: new Set(valid ? stvResult.elected : []),
+      tied: new Set(rankingTies.length ? rankingTies.flatMap(t => t.tied)
+                                       : stvResult && stvResult.tie ? stvResult.tie.candidates : []),
+      tiePositions: new Set(rankingTies.map(t => t.position)),
+    };
 
-    lastComputed = { d1, d2, candidates, seats, counts1, counts2, totals, rankings, stvResult };
+    lastComputed = valid ? { d1, d2, candidates, seats, counts1, counts2, totals, rankings, stvResult } : null;
+    const downloadBtn = document.getElementById('download-btn');
+    downloadBtn.disabled = !valid;
+    downloadBtn.title = valid ? '' : 'Unavailable: the current configuration has a tie';
 
-    drawHistogram(totals, counts1, counts2, candidates, elected, d1, d2);
+    drawHistogram(totals, counts1, counts2, candidates, outcome, d1, d2);
 
     // Rankings table
     const rtbody = document.getElementById('rankings-table-body');
@@ -1111,12 +1214,13 @@
       rankTotal += count;
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${ranking}</td><td>${count}</td>`;
+      if (ranking.includes('=')) tr.style.color = TIE_COLOR;
       rtbody.appendChild(tr);
     }
     rtfoot.innerHTML = `<tr><td>Total</td><td>${rankTotal}</td></tr>`;
 
     // STV display
-    drawSTV(rankings, seats);
+    drawSTV(rankings, rankingTies, stvResult, seats);
 
     const tbody = document.getElementById('voter-table-body');
     const tfoot = document.getElementById('voter-table-foot');
@@ -1149,7 +1253,9 @@
 
   function loadConfig(json) {
     const err = document.getElementById('upload-error');
+    const notice = document.getElementById('load-notice');
     err.textContent = '';
+    notice.textContent = '';
     try {
       const cfg = json.config;
       if (!cfg) throw new Error('Missing "config" key');
@@ -1167,7 +1273,12 @@
       const n = cfg.candidates.length;
       setSlider('num-candidates', n);
       document.getElementById('num-candidates-val').textContent = n;
-      candPositions = cfg.candidates.map(p => Math.max(0.5, Math.min(99.5, p)));
+      // Move off-grid positions onto the candidate grid, and say so
+      candPositions = cfg.candidates.map(p => onGrid(clampCand(p)) ? clampCand(p) : snapTowardCenter(p));
+      const moved = cfg.candidates
+        .map((p, i) => p !== candPositions[i] ? `${CAND_LABELS[i]} ${p}→${candPositions[i]}` : null)
+        .filter(Boolean);
+      if (moved.length) notice.textContent = `Moved to the 2-unit candidate grid: ${moved.join(', ')}`;
       candEnabled   = cfg.candidates.map(() => true);
       numParties  = cfg.numParties ?? 0;
       candParties = cfg.candParties?.length === n ? cfg.candParties.slice() : cfg.candidates.map(() => 1);
@@ -1180,6 +1291,8 @@
       rebuildDivLines(numParties);
       rebuildCandSliders(n);
 
+      // Raise the seats limit first so the slider doesn't clamp to the previous candidate count
+      document.getElementById('seats').max = n;
       if (cfg.seats != null) setSlider('seats', cfg.seats);
 
       update();
@@ -1187,6 +1300,37 @@
       err.textContent = 'Error: ' + e.message;
     }
   }
+
+  // --- Built-in examples ---
+
+  // Off-grid originals were moved one unit toward the center (as an upload would be);
+  // each keeps its original winners and round sequence.
+  const BUILTIN_EXAMPLES = [
+    {
+      name: '2-of-4: two even blocs, 4 candidates, 2 seats',
+      config: {
+        distributions: [{ mean: 25, sd: 12, n: 1000 }, { mean: 75, sd: 12, n: 1000 }],
+        candidates: [18.5, 34.5, 64.5, 80.5],
+        seats: 2,
+      },
+    },
+    {
+      name: '3-of-6: 1:2 blocs, 6 candidates, 3 seats',
+      config: {
+        distributions: [{ mean: 30, sd: 12, n: 1000 }, { mean: 70, sd: 12, n: 2000 }],
+        candidates: [20.5, 28.5, 38.5, 52.5, 66.5, 82.5],
+        seats: 3,
+      },
+    },
+  ];
+
+  const exampleSelect = document.getElementById('example-select');
+  BUILTIN_EXAMPLES.forEach((ex, i) => exampleSelect.add(new Option(ex.name, i)));
+  exampleSelect.addEventListener('change', function() {
+    if (this.value === '') return;
+    loadConfig({ config: BUILTIN_EXAMPLES[+this.value].config });
+    this.value = '';  // allow reloading the same example
+  });
 
   document.getElementById('upload-input').addEventListener('change', function() {
     const file = this.files[0];
@@ -1228,7 +1372,7 @@
         const base = {
           round: i + 1,
           type: step.type,
-          candidate: step.candidate,
+          candidates: step.candidates,
           tally: Object.fromEntries(
             Object.entries(step.tally).map(([c, v]) => [c, +v.toFixed(4)])
           ),
@@ -1241,9 +1385,14 @@
             rankingAfter: step.perBallot[ri].rankingAfter === '—' ? [] : step.perBallot[ri].rankingAfter.split(' > '),
           }));
         } else {
-          if (step.votes  != null) base.votes    = +step.votes.toFixed(4);
-          if (step.surplus != null) base.surplus  = +step.surplus.toFixed(4);
-          if (step.fraction != null) base.transferFraction = +step.fraction.toFixed(6);
+          if (step.details) {
+            base.elected = step.details.map(d => ({
+              candidate: d.candidate,
+              votes: +d.votes.toFixed(4),
+              surplus: +d.surplus.toFixed(4),
+              transferFraction: +d.fraction.toFixed(6),
+            }));
+          }
           base.ballotProgression = rankings.map((r, ri) => {
             const pb = step.perBallot[ri];
             const weightBefore = +(pb.used + pb.after).toFixed(4);
