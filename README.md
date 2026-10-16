@@ -47,3 +47,20 @@ Open `index.html` directly, or serve it on the local network:
     npm install
     npx playwright install chromium   # once
     npm test
+
+## Publishing
+
+The site is published at https://proportional-rcv.electionmath.com/ by GitHub Pages.
+
+Every push to `main` runs `.github/workflows/pages.yml`: it runs `npm test` and, if that
+passes, publishes only `index.html`, `engine.js`, `examples.js` and `vendor/`. A failed
+test leaves the previous version live. Progress is in the repo's Actions tab.
+
+To publish a new file, add it to the `cp` line in the workflow.
+
+One-time settings this depends on:
+
+- Repo Settings → Pages → Source: **GitHub Actions**; Custom domain:
+  `proportional-rcv.electionmath.com`; **Enforce HTTPS** on
+- Squarespace DNS for electionmath.com: CNAME `proportional-rcv` → `proebsting.github.io`,
+  plus the TXT record GitHub issued when the domain was verified (account Settings → Pages)
