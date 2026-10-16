@@ -315,10 +315,11 @@
 
 <div class="section">
   <h2>Voter Distribution</h2>
-  <p class="section-desc">Combined histogram of all voters across the spectrum. Candidate positions are shown as vertical lines — green with a checkmark if elected, red with an ✗ if eliminated. The dashed <span style="color:#5b4fcf">purple</span> line marks the <strong>median</strong> voter and the dashed <span style="color:#c47a00">orange</span> line marks the <strong>mean</strong>. Drag the <span style="color:#2a72c3"><strong>blue (D1)</strong></span> or <span style="color:#b03a2a"><strong>red (D2)</strong></span> handle to adjust that distribution interactively.</p>
+  <p class="section-desc">Combined histogram of all voters across the spectrum. Candidate positions are shown as vertical lines — green with a checkmark if elected, red with an ✗ if eliminated. The dashed <span style="color:#5b4fcf">purple</span> line marks the <strong>median</strong> voter and the dashed <span style="color:#c47a00">orange</span> line marks the <strong>mean</strong>. The numbered <span style="color:#0e8a7e">teal</span> bands are the <strong>seat intervals</strong>: one per seat, each holding an equal share of the voters (a Hare quota). A proportional result has one winner in each interval. Drag the <span style="color:#2a72c3"><strong>blue (D1)</strong></span> or <span style="color:#b03a2a"><strong>red (D2)</strong></span> handle to adjust that distribution interactively.</p>
   <div style="margin-bottom:8px; font-size:0.85em; display:flex; gap:16px;">
     <label><input type="checkbox" id="show-median" checked> Show median</label>
     <label><input type="checkbox" id="show-average" checked> Show average</label>
+    <label><input type="checkbox" id="show-seat-intervals" checked> Show seat intervals</label>
   </div>
   <svg id="histogram"></svg>
 </div>
@@ -588,7 +589,9 @@
 
   const xAxisG = g.append('g').attr('transform', `translate(0,${chartH})`);
   const yAxisG = g.append('g');
+  const seatIntervalsG = g.append('g').attr('class', 'seat-intervals');  // shaded bands, behind the bars
   const barsG      = g.append('g').attr('class', 'bars');
+  const seatLabelsG = g.append('g').attr('class', 'seat-interval-labels');
   const dist1BarsG = g.append('g').attr('class', 'dist1-bars');
   const dist2BarsG = g.append('g').attr('class', 'dist2-bars');
   const divLinesG  = g.append('g').attr('class', 'div-lines');
@@ -613,6 +616,7 @@
 
   const DIST_COLORS = { d1: '#2a72c3', d2: '#b03a2a' };
   const TIE_COLOR = '#d97706';
+  const SEAT_INTERVAL_COLOR = '#0e8a7e';
   let activeDistKey = null;
   let distDragYScale = null;  // frozen copy of yScale at drag start
 
@@ -756,6 +760,33 @@
         .text(`${d.i + 1}|${d.i + 2}`);
     });
     dlGroups.exit().remove();
+
+    // Seat intervals: one alternately shaded band per seat, each holding an equal share of the
+    // voters, numbered in its top-left corner (or bottom-left, if a drag handle is in the way). Bands rather than lines, since with 2 seats the boundary is
+    // exactly the median.
+    const seatCount = +document.getElementById('seats').value;
+    const handleCenters = d1 && d2 ? [[d1, counts1], [d2, counts2]].map(([d, c]) => ({ x: xScale(d.mean), y: yScale(d3.max(c)) })) : [];
+    const showSeatIntervals = document.getElementById('show-seat-intervals').checked && seatCount > 1;
+    const edges = [CAND_MIN, ...seatIntervalBoundaries(totals, seatCount), CAND_MAX];
+    const bands = showSeatIntervals ? edges.slice(1).map((x1, i) => ({ i, x0: edges[i], x1 })) : [];
+    seatIntervalsG.selectAll('rect').data(bands).join('rect')
+      .attr('x', d => xScale(d.x0)).attr('width', d => xScale(d.x1) - xScale(d.x0))
+      .attr('y', 0).attr('height', chartH)
+      .attr('fill', SEAT_INTERVAL_COLOR).attr('opacity', d => d.i % 2 ? 0.07 : 0.16);
+    seatLabelsG.selectAll('text').data(bands).join('text')
+      .attr('x', d => xScale(d.x0) + 4).attr('y', 10)  // top-left corner: a band's middle is often under a drag handle
+      .attr('text-anchor', 'start').attr('font-size', '9px').attr('font-weight', 'bold')
+      .attr('fill', SEAT_INTERVAL_COLOR)
+      .attr('stroke', 'white').attr('stroke-width', 3).attr('paint-order', 'stroke')
+      .attr('pointer-events', 'none')
+      .text(d => d.i + 1)
+      .each(function() {
+        // A drag handle (drawn later, on top) would cover the number: drop it to the band's bottom
+        const box = this.getBBox(), r = 11;
+        const covered = handleCenters.some(h =>
+          h.x + r > box.x && h.x - r < box.x + box.width && h.y + r > box.y && h.y - r < box.y + box.height);
+        if (covered) d3.select(this).attr('y', chartH - 4);
+      });
 
     // Median and average voter lines
     const total = totals.reduce((a, b) => a + b, 0);
@@ -1448,6 +1479,7 @@
 
   document.getElementById('show-median').addEventListener('change', update);
   document.getElementById('show-average').addEventListener('change', update);
+  document.getElementById('show-seat-intervals').addEventListener('change', update);
 
   // Initial render, then any example named in the URL (index.html?example=<id>)
   rebuildDivLines(0);

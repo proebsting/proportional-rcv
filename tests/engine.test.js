@@ -5,7 +5,7 @@ const path = require('node:path');
 const {
   CAND_MIN, CAND_MAX, onGrid, snapToGrid, snapTowardCenter,
   DIV_MIN, DIV_MAX, clampDivLine, normalizeDivLines, validDivLines,
-  distributeVoters, computeRankings, runSTV,
+  distributeVoters, seatIntervalBoundaries, computeRankings, runSTV,
   distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,
   bestDisproportionality, solidCoalitions, proportionality,
 } = require('../engine.js');
@@ -318,5 +318,28 @@ test('party dividing lines', async t => {
     assert.ok(!validDivLines([60.5, 40.5]));
     assert.ok(!validDivLines([40.5, 40.5]));
     assert.ok(!validDivLines([50]));
+  });
+});
+
+test('seat intervals', async t => {
+  await t.test('uniform voters split at equal distances', () => {
+    assert.deepEqual(seatIntervalBoundaries(Array(100).fill(10), 4), [25.5, 50.5, 75.5]);
+    assert.deepEqual(seatIntervalBoundaries(Array(100).fill(10), 1), []);
+  });
+  await t.test('a boundary can fall partway through a position', () => {
+    const totals = Array(100).fill(0); totals[0] = 1; totals[9] = 3;  // 1 voter at 1, 3 at 10
+    // Half the voters (2) are reached a third of the way through position 10's span [9.5, 10.5]
+    assert.ok(Math.abs(seatIntervalBoundaries(totals, 2)[0] - (9.5 + 1 / 3)) < 1e-12);
+  });
+  await t.test('each interval holds an equal share of the voters', () => {
+    const totals = electorate([{ mean: 30, sd: 12, n: 1000 }, { mean: 70, sd: 12, n: 2000 }]);
+    const total = totals.reduce((a, b) => a + b, 0);
+    const below = x => totals.reduce((t, c, i) => t + c * Math.min(1, Math.max(0, x - (i + 0.5))), 0);
+    seatIntervalBoundaries(totals, 3).forEach((x, k) => assert.ok(Math.abs(below(x) - total * (k + 1) / 3) < 1e-9));
+  });
+  await t.test('mirror-image electorates give mirrored boundaries', () => {
+    const a = electorate([{ mean: 30, sd: 12, n: 1500 }, { mean: 71, sd: 12, n: 1500 }]);
+    const b = seatIntervalBoundaries(a, 4);
+    b.forEach((x, k) => assert.ok(Math.abs(x + b[b.length - 1 - k] - 101) < 1e-9));
   });
 });

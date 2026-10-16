@@ -233,3 +233,33 @@ test('uploading crossed dividing lines is rejected and changes nothing', async (
   assert.match(await page.textContent('#upload-error'), /divLines must be/);
   assert.equal(await page.inputValue('#d1-mean'), before);
 });
+
+test('seat intervals: one band per seat, none for 1 seat, and can be turned off', async () => {
+  await page.selectOption('#example-select', '3-of-6');
+  assert.equal(await page.$$eval('#histogram .seat-intervals rect', l => l.length), 3);
+  await setSlider('seats', 1);
+  assert.equal(await page.$$eval('#histogram .seat-intervals rect', l => l.length), 0);
+  await setSlider('seats', 4);
+  assert.equal(await page.$$eval('#histogram .seat-intervals rect', l => l.length), 4);
+  assert.deepEqual(await page.$$eval('#histogram .seat-interval-labels text', t => t.map(x => x.textContent)), ['1', '2', '3', '4']);
+  await page.$eval('#show-seat-intervals', el => { el.checked = false; el.dispatchEvent(new Event('change')); });
+  assert.equal(await page.$$eval('#histogram .seat-intervals rect', l => l.length), 0);
+  assert.equal(await page.$$eval('#histogram .seat-interval-labels text', l => l.length), 0);
+});
+
+test('seat interval numbers are never covered by a drag handle', async () => {
+  for (const example of ['2-of-4', '3-of-6']) {
+    await page.selectOption('#example-select', example);
+    for (const seats of [2, 3, 4]) {
+      await setSlider('seats', seats);
+      const covered = await page.evaluate(() => {
+        const handles = [...document.querySelectorAll('#histogram g.dist-handle circle')].map(c => c.getBoundingClientRect());
+        return [...document.querySelectorAll('#histogram .seat-interval-labels text')].filter(t => {
+          const b = t.getBoundingClientRect();
+          return handles.some(h => h.left < b.right && b.left < h.right && h.top < b.bottom && b.top < h.bottom);
+        }).map(t => t.textContent);
+      });
+      assert.deepEqual(covered, [], `${example}, ${seats} seats`);
+    }
+  }
+});

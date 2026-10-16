@@ -67,6 +67,22 @@ function distributeVoters(mean, sd, n) {
   return raw.map(p => Math.round((p / sum) * n));
 }
 
+// Boundaries dividing the electorate into `seats` intervals of equal size (a Hare quota of
+// voters each). Each position's voters are treated as spread evenly over [v - 0.5, v + 0.5],
+// so a boundary can fall partway through a position. Returns seats - 1 x-coordinates.
+function seatIntervalBoundaries(totals, seats) {
+  const total = totals.reduce((a, b) => a + b, 0);
+  const bounds = [];
+  if (total === 0) return bounds;
+  let cum = 0, i = 0;
+  for (let k = 1; k < seats; k++) {
+    const target = total * k / seats;
+    while (cum + totals[i] < target) cum += totals[i++];
+    bounds.push(i + 0.5 + (target - cum) / totals[i]);  // position i + 1 spans [i + 0.5, i + 1.5]
+  }
+  return bounds;
+}
+
 // --- Rankings ---
 
 // Returns party number (1-indexed) for a voter at position v, based on dividing lines
@@ -372,7 +388,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     CAND_MIN, CAND_MAX, clampCand, onGrid, snapToGrid, snapTowardCenter,
     DIV_MIN, DIV_MAX, clampDivLine, normalizeDivLines, validDivLines,
-    normalPDF, distributeVoters, getVoterParty, computeRankings,
+    normalPDF, distributeVoters, seatIntervalBoundaries, getVoterParty, computeRankings,
     Q, qadd, qsub, qmul, qdiv, qcmp, qnum, runSTV,
     distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,
     bestDisproportionality, solidCoalitions, proportionality,
