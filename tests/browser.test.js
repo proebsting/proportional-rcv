@@ -103,3 +103,25 @@ test('a large election updates quickly enough to drag', async () => {
   console.log(`    26 candidates / 20 seats: ${ms.toFixed(0)} ms per update`);
   assert.ok(ms < 1000);
 });
+
+test('proportionality section for the 3-of-6 example', async () => {
+  await page.selectOption('#example-select', '1');
+  const text = await page.textContent('#prop-results');
+  assert.match(text, /Distribution 1\s*998\s*33\.3%\s*1\.00\s*0\s*0\.0%/);
+  assert.match(text, /Gallagher: 33\.\d\d/);
+  assert.match(text, /Distribution 1 \(1 Droop quota\): not a solid coalition/);
+});
+
+test('proportionality uses party groups when parties are on', async () => {
+  await setSlider('num-parties', 2);
+  await page.$eval('#allow-leakage', el => { el.checked = false; el.dispatchEvent(new Event('change')); });
+  for (const i of [2, 3]) await page.selectOption(`#c${i}-party`, '2');
+  const text = await page.textContent('#prop-results');
+  assert.match(text, /Party 1/);
+  assert.match(text, /solid coalition for \{A, B\}/);
+});
+
+test('proportionality is unavailable for an invalid configuration', async () => {
+  await setSlider('c1-pos', await page.inputValue('#c0-pos'));
+  assert.match(await page.textContent('#prop-results'), /Not available/);
+});

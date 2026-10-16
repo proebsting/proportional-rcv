@@ -54,12 +54,14 @@ function getVoterParty(v, divLines) {
 // given (leakage disabled), each voter ranks own-party candidates first, with parties
 // determined by those dividing lines. Candidates the voter is equidistant from are joined
 // with " = " and reported as ties; positions with no voters cannot produce ties.
-// Returns { rankings: [{ ranking: "A > B > C > D", count }], ties: [{ position, count, tied }] }
-// with rankings in left-to-right order of first appearance (voter position 1 → 100).
+// Returns { rankings: [{ ranking: "A > B > C > D", count }], ties: [{ position, count, tied }],
+// byPosition } with rankings in left-to-right order of first appearance (voter position
+// 1 → 100); byPosition[i] is the ranking string of voters at position i + 1 (null if none).
 function computeRankings(totals, candidates, partyDivLines = null) {
   const seen = new Map(); // ranking string → count
   const order = [];       // insertion order
   const ties = [];
+  const byPosition = Array(100).fill(null);
 
   // Sort a group by distance, splitting it into runs of equal distance
   function runsByDistance(group) {
@@ -91,12 +93,13 @@ function computeRankings(totals, candidates, partyDivLines = null) {
       if (run.length > 1) ties.push({ position: v, count, tied: run.map(c => c.label) });
     }
     const ranked = runs.map(run => run.map(c => c.label).join(' = ')).join(' > ');
+    byPosition[i] = ranked;
 
     if (!seen.has(ranked)) { seen.set(ranked, 0); order.push(ranked); }
     seen.set(ranked, seen.get(ranked) + count);
   }
 
-  return { rankings: order.map(r => ({ ranking: r, count: seen.get(r) })), ties };
+  return { rankings: order.map(r => ({ ranking: r, count: seen.get(r) })), ties, byPosition };
 }
 
 // --- STV count ---
@@ -232,10 +235,119 @@ function runSTV(rankingRows, seats) {
   return { quota, totalVotes, steps, elected, tie };
 }
 
+// --- Proportionality ---
+
+// Groups for measuring proportionality: { name, votes, seats, ballots: [{ prefs, count }] }.
+// `byPosition` is computeRankings' per-position ranking strings; `winners` are the elected
+// candidates ({ label, pos, party }).
+
+// One group per voter distribution. A winner's seat goes to the distribution with the most
+// voters at the candidate's position (the integer positions either side of it); distributions
+// with exactly equal numbers there share the seat equally.
+function distributionGroups(countsList, byPosition, winners) {
+  const groups = countsList.map((counts, d) => ({
+    name: `Distribution ${d + 1}`,
+    votes: counts.reduce((a, b) => a + b, 0),
+    seats: 0,
+    ballots: counts.flatMap((count, i) => count > 0 ? [{ prefs: byPosition[i].split(' > '), count }] : []),
+  }));
+  for (const w of winners) {
+    const near = [w.pos - 0.5, w.pos + 0.5].filter(v => v >= 1 && v <= 100);
+    const local = countsList.map(counts => near.reduce((t, v) => t + counts[v - 1], 0));
+    const most = Math.max(...local);
+    const holders = local.flatMap((n, d) => n === most ? [d] : []);
+    for (const d of holders) groups[d].seats += 1 / holders.length;
+  }
+  return groups;
+}
+
+// One group per party: voters by the dividing lines, seats by the winners' party labels.
+function partyGroups(totals, divLines, byPosition, winners) {
+  const groups = Array.from({ length: divLines.length + 1 }, (_, p) => ({
+    name: `Party ${p + 1}`, votes: 0, seats: 0, ballots: [],
+  }));
+  totals.forEach((count, i) => {
+    if (count === 0) return;
+    const g = groups[getVoterParty(i + 1, divLines) - 1];
+    g.votes += count;
+    g.ballots.push({ prefs: byPosition[i].split(' > '), count });
+  });
+  for (const w of winners) groups[w.party - 1].seats += 1;
+  return groups;
+}
+
+// Disproportionality between vote and seat shares (both in percent, same group order)
+function gallagherIndex(v, s) {
+  return Math.sqrt(0.5 * v.reduce((t, vi, i) => t + (vi - s[i]) ** 2, 0));
+}
+function loosemoreHanbyIndex(v, s) {
+  return 0.5 * v.reduce((t, vi, i) => t + Math.abs(vi - s[i]), 0);
+}
+
+// The least disproportionality any whole-seat allocation of `seats` can achieve for these vote
+// counts. Largest-remainder (Hamilton) allocation minimizes both indices. Groups with equal
+// remainders give the same index values whichever gets the seat, so no tie-break is involved.
+function bestDisproportionality(votes, seats) {
+  const total = votes.reduce((a, b) => a + b, 0);
+  const quotas = votes.map(v => v * seats / total);
+  const alloc = quotas.map(Math.floor);
+  const byRemainder = quotas.map((_, i) => i).sort((a, b) => (quotas[b] - alloc[b]) - (quotas[a] - alloc[a]));
+  const remaining = seats - alloc.reduce((a, b) => a + b, 0);
+  for (let k = 0; k < remaining; k++) alloc[byRemainder[k]]++;
+  const v = votes.map(x => 100 * x / total), s = alloc.map(x => 100 * x / seats);
+  return { gallagher: gallagherIndex(v, s), loosemoreHanby: loosemoreHanbyIndex(v, s) };
+}
+
+// Proportionality for solid coalitions (Droop): if a group's voters hold k whole quotas and
+// all rank the same j candidates (in any order) above every other candidate, STV guarantees
+// that at least min(k, j) of those j are elected. Returns the group's whole quotas and every
+// such candidate set with j < numCandidates (j = numCandidates holds trivially).
+function solidCoalitions(ballots, quota, numCandidates, elected) {
+  const voters = ballots.reduce((t, b) => t + b.count, 0);
+  const quotas = Math.floor(voters / quota);
+  const coalitions = [];
+  for (let j = 1; j < numCandidates && ballots.length; j++) {
+    const key = b => [...b.prefs.slice(0, j)].sort().join();
+    const first = key(ballots[0]);
+    if (ballots.every(b => key(b) === first)) {
+      const candidates = first.split(',');
+      coalitions.push({
+        candidates,
+        guaranteed: Math.min(quotas, j),
+        won: candidates.filter(c => elected.includes(c)).length,
+      });
+    }
+  }
+  return { quotas, coalitions };
+}
+
+// Measures for a finished, valid count
+function proportionality(groups, seats, quota, numCandidates, elected) {
+  const totalVotes = groups.reduce((t, g) => t + g.votes, 0);
+  const rows = groups.map(g => ({
+    name: g.name,
+    votes: g.votes,
+    voteShare: 100 * g.votes / totalVotes,
+    idealSeats: seats * g.votes / totalVotes,
+    seats: g.seats,
+    seatShare: 100 * g.seats / seats,
+    solid: solidCoalitions(g.ballots, quota, numCandidates, elected),
+  }));
+  const v = rows.map(r => r.voteShare), s = rows.map(r => r.seatShare);
+  return {
+    rows,
+    gallagher: gallagherIndex(v, s),
+    loosemoreHanby: loosemoreHanbyIndex(v, s),
+    best: bestDisproportionality(groups.map(g => g.votes), seats),
+  };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     CAND_MIN, CAND_MAX, clampCand, onGrid, snapToGrid, snapTowardCenter,
     normalPDF, distributeVoters, getVoterParty, computeRankings,
     Q, qadd, qsub, qmul, qdiv, qcmp, qnum, runSTV,
+    distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,
+    bestDisproportionality, solidCoalitions, proportionality,
   };
 }

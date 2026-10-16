@@ -183,6 +183,10 @@
     }
     .stv-invalid ul { margin: 4px 0; padding-left: 20px; }
     #download-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #prop-results { font-size: 0.88em; }
+    #prop-results .stv-table { margin-bottom: 12px; }
+    .prop-indices { margin: 4px 0 12px; line-height: 1.7; }
+    .prop-solid { margin: 0; padding-left: 20px; line-height: 1.6; }
     .section-desc { font-size: 0.88em; color: #555; margin: 0 0 12px; line-height: 1.5; }
   </style>
 </head>
@@ -297,6 +301,14 @@
   <h2>STV Results</h2>
   <p class="section-desc">Round-by-round results of the STV count. The ballot progression table shows how each ballot group's votes are used or transferred across rounds. Each subsequent round shows either every candidate who has reached the Droop quota being elected together (their surpluses transferred fractionally and simultaneously) or the lowest candidate being eliminated (their votes redistributed to next preferences). The count uses exact fractions; if two or more candidates are tied for lowest, the configuration is invalid.</p>
   <div id="stv-results"></div>
+</div>
+
+<div class="section">
+  <h2>Proportionality</h2>
+  <p class="section-desc">How closely each group's share of the seats matches its share of the voters. Without parties, the groups are the two voter distributions, and each winner counts for the distribution with more voters at the candidate's position (an exact tie splits the seat). With parties, voters are grouped by the dividing lines and winners by their party label.
+    The <strong>Gallagher</strong> index (√(½ Σ (vote % − seat %)²)) is the standard measure; <strong>Loosemore–Hanby</strong> (½ Σ |vote % − seat %|) is the percentage of seats held beyond vote share. 0 is perfectly proportional. With few seats some disproportionality is unavoidable, so each is shown against the <strong>best achievable</strong> with this many seats; the difference is what STV adds.
+    A group is a <strong>solid coalition</strong> if all its voters rank the same candidates (in any order) above every other; STV guarantees such a group holding k Droop quotas at least k of those candidates.</p>
+  <div id="prop-results"></div>
 </div>
 
 <div class="section">
@@ -981,6 +993,44 @@
     container.innerHTML = html;
   }
 
+  // --- Proportionality rendering ---
+
+  function drawProportionality(prop) {
+    const container = document.getElementById('prop-results');
+    if (!prop) {
+      container.innerHTML = '<p style="color:#666">Not available: there is no valid election result.</p>';
+      return;
+    }
+    const seatsText = x => Number.isInteger(x) ? `${x}` : x.toFixed(1);
+    const rows = prop.rows.map(r => `<tr>
+        <td>${r.name}</td><td>${r.votes}</td><td>${r.voteShare.toFixed(1)}%</td>
+        <td>${r.idealSeats.toFixed(2)}</td><td>${seatsText(r.seats)}</td><td>${r.seatShare.toFixed(1)}%</td>
+      </tr>`).join('');
+    const index = (name, value, best) =>
+      `<strong>${name}:</strong> ${value.toFixed(2)} &nbsp;(best achievable ${best.toFixed(2)}; added by STV ${(value - best).toFixed(2)})`;
+
+    const solid = prop.rows.map(r => {
+      const q = `${r.solid.quotas} Droop quota${r.solid.quotas === 1 ? '' : 's'}`;
+      if (!r.solid.coalitions.length) {
+        return `<li><strong>${r.name}</strong> (${q}): not a solid coalition — its voters do not all rank the same candidates above the rest, so STV guarantees it nothing.</li>`;
+      }
+      const sets = r.solid.coalitions.map(c =>
+        `{${c.candidates.join(', ')}}: guaranteed ${c.guaranteed}, won ${c.won}`).join('; ');
+      return `<li><strong>${r.name}</strong> (${q}): solid coalition for ${sets}.</li>`;
+    }).join('');
+
+    container.innerHTML = `
+      <table class="stv-table">
+        <thead><tr><th>Group</th><th>Voters</th><th>Vote share</th><th>Ideal seats</th><th>Seats won</th><th>Seat share</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="prop-indices">
+        ${index('Gallagher', prop.gallagher, prop.best.gallagher)}<br>
+        ${index('Loosemore–Hanby', prop.loosemoreHanby, prop.best.loosemoreHanby)}
+      </div>
+      <ul class="prop-solid">${solid}</ul>`;
+  }
+
   let lastComputed = null;
 
   function update() {
@@ -1000,8 +1050,8 @@
     // Rankings + STV (needed before histogram so we know winners)
     // A tied ranking leaves the ballots undefined, so STV only runs when there are none
     const usePartyRanking = !allowLeakage && numParties >= 2 && candidates.some(c => c.party != null);
-    const { rankings, ties: rankingTies } = candidates.length
-      ? computeRankings(totals, candidates, usePartyRanking ? divLines : null) : { rankings: [], ties: [] };
+    const { rankings, ties: rankingTies, byPosition } = candidates.length
+      ? computeRankings(totals, candidates, usePartyRanking ? divLines : null) : { rankings: [], ties: [], byPosition: [] };
     const seats = +document.getElementById('seats').value;
     const stvResult = rankings.length && !rankingTies.length ? runSTV(rankings, seats) : null;
     const valid = !!stvResult && !stvResult.tie;
@@ -1012,7 +1062,18 @@
                                        : stvResult && stvResult.tie ? stvResult.tie.candidates : []),
     };
 
-    lastComputed = valid ? { d1, d2, candidates, seats, counts1, counts2, totals, rankings, stvResult } : null;
+    let prop = null;
+    if (valid) {
+      const winners = candidates.filter(c => stvResult.elected.includes(c.label));
+      const groups = numParties >= 2
+        ? partyGroups(totals, divLines, byPosition, winners)
+        : distributionGroups([counts1, counts2], byPosition, winners);
+      prop = proportionality(groups, seats, stvResult.quota, candidates.length, stvResult.elected);
+    }
+    drawProportionality(prop);
+
+    lastComputed = valid
+      ? { d1, d2, candidates, seats, counts1, counts2, totals, rankings, byPosition, stvResult, prop } : null;
     const downloadBtn = document.getElementById('download-btn');
     downloadBtn.disabled = !valid;
     downloadBtn.title = valid ? '' : 'Unavailable: the current configuration has a tie';
@@ -1164,7 +1225,7 @@
   // --- Download ---
 
   function buildDownloadJSON() {
-    const { d1, d2, candidates, seats, counts1, counts2, totals, rankings, stvResult } = lastComputed;
+    const { d1, d2, candidates, seats, counts1, counts2, totals, rankings, byPosition, stvResult, prop } = lastComputed;
 
     // Per-position voter detail
     const votersByPosition = [];
@@ -1172,10 +1233,7 @@
       const position = i + 1;
       const dist1 = counts1[i], dist2 = counts2[i], total = dist1 + dist2;
       if (total === 0) continue;
-      const ranking = candidates
-        .map(c => ({ label: c.label, dist: Math.abs(position - c.pos) }))
-        .sort((a, b) => a.dist - b.dist)
-        .map(c => c.label);
+      const ranking = byPosition[i].split(' > ');
       votersByPosition.push({ position, dist1, dist2, total, ranking });
     }
 
@@ -1247,6 +1305,17 @@
       votersByPosition,
       ballotGroups: rankings.map(r => ({ ranking: r.ranking.split(' > '), voters: r.count })),
       stv: stvOut,
+      proportionality: {
+        groups: prop.rows.map(r => ({
+          name: r.name, voters: r.votes, voteShare: +r.voteShare.toFixed(4), idealSeats: +r.idealSeats.toFixed(4),
+          seats: r.seats, seatShare: +r.seatShare.toFixed(4), droopQuotas: r.solid.quotas,
+          solidCoalitions: r.solid.coalitions,
+        })),
+        gallagher: +prop.gallagher.toFixed(4),
+        loosemoreHanby: +prop.loosemoreHanby.toFixed(4),
+        bestGallagher: +prop.best.gallagher.toFixed(4),
+        bestLoosemoreHanby: +prop.best.loosemoreHanby.toFixed(4),
+      },
     };
   }
 
