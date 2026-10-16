@@ -162,3 +162,25 @@ test('uploading a config replaces the loaded example', async () => {
   await page.waitForFunction(() => document.getElementById('example-panel').hidden);
   assert.doesNotMatch(page.url(), /example=/);
 });
+
+test('median and mean labels never overlap and stay inside the chart', async () => {
+  const boxes = () => page.evaluate(() => {
+    const svg = document.getElementById('histogram').getBoundingClientRect();
+    const labels = [...document.querySelectorAll('.stat-labels text')].map(t => t.getBoundingClientRect());
+    return { svg: { left: svg.left, right: svg.right }, labels: labels.map(r => ({ l: r.left, r: r.right, t: r.top, b: r.bottom })) };
+  });
+  const overlap = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  // [d1 mean, d1 n, d2 mean, d2 n]: mean just left of median, coincident, both near each edge
+  for (const [m1, n1, m2, n2] of [[30, 1000, 70, 2000], [30, 1500, 71, 1500], [3, 3000, 8, 100], [97, 3000, 92, 100], [50, 1000, 51, 1000]]) {
+    await setSlider('d1-mean', m1); await setSlider('d1-n', n1);
+    await setSlider('d2-mean', m2); await setSlider('d2-n', n2);
+    const { svg, labels } = await boxes();
+    const where = `config ${[m1, n1, m2, n2]}`;
+    assert.equal(labels.length, 2, where);
+    assert.ok(!overlap(labels[0], labels[1]), `labels overlap: ${where}`);
+    for (const b of labels) assert.ok(b.l >= svg.left && b.r <= svg.right, `label outside chart: ${where}`);
+  }
+  await page.$eval('#show-average', el => { el.checked = false; el.dispatchEvent(new Event('change')); });
+  const { labels } = await boxes();
+  assert.equal(labels.length, 1);
+});

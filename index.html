@@ -560,7 +560,7 @@
   }
 
   // --- Histogram setup (runs once) ---
-  const margin = { top: 28, right: 16, bottom: 30, left: 48 };
+  const margin = { top: 42, right: 16, bottom: 30, left: 48 };  // top: median/mean row, then candidate labels
   const svgEl = document.getElementById('histogram');
   // We'll size the inner area based on the element's rendered width
   function chartWidth() { return svgEl.clientWidth - margin.left - margin.right || 800; }
@@ -584,6 +584,7 @@
   const medianG    = g.append('g').attr('class', 'median-line');
   const averageG  = g.append('g').attr('class', 'average-line');
   const linesG    = g.append('g').attr('class', 'cand-lines');
+  const statLabelsG = g.append('g').attr('class', 'stat-labels');  // median/mean labels, above candidate lines
   const handlesG  = g.append('g').attr('class', 'dist-handles');
 
   const candDrag = d3.drag()
@@ -774,11 +775,6 @@
       .attr('stroke', '#5b4fcf')
       .attr('stroke-width', 1.5)
       .attr('stroke-dasharray', '5,3');
-    medianG.selectAll('text').data([median]).join('text')
-      .attr('x', mx + 3).attr('y', 10)
-      .attr('font-size', '10px')
-      .attr('fill', '#5b4fcf')
-      .text(`Median (${median})`);
 
     const ax = xScale(average);
     averageG.style('display', showAverage ? null : 'none');
@@ -788,11 +784,33 @@
       .attr('stroke', '#c47a00')
       .attr('stroke-width', 1.5)
       .attr('stroke-dasharray', '5,3');
-    averageG.selectAll('text').data([average]).join('text')
-      .attr('x', ax + 3).attr('y', 22)
+
+    // The labels get their own row above the candidate labels, clear of the bars and drag
+    // handles. Each sits on the outer side of its line (the left line's label to its left, the
+    // right one's to its right), so the two spread apart and never overlap. A label that would
+    // run off the chart flips inward and drops into the top of the plot, with a white outline
+    // to keep it readable there.
+    const statLabels = [
+      showMedian  && { key: 'median', x: mx, color: '#5b4fcf', text: `Median (${median})` },
+      showAverage && { key: 'mean',   x: ax, color: '#c47a00', text: `Mean (${average.toFixed(1)})` },
+    ].filter(Boolean).sort((a, b) => a.x - b.x);
+    statLabels.forEach((d, i) => { d.left = statLabels.length === 2 && i === 0; });
+    const place = (sel, flipped) => sel
+      .attr('text-anchor', d => d.left !== flipped ? 'end' : 'start')
+      .attr('x', d => d.left !== flipped ? d.x - 4 : d.x + 4)
+      .attr('y', flipped ? 10 : -20);
+    statLabelsG.selectAll('text').data(statLabels, d => d.key).join('text')
       .attr('font-size', '10px')
-      .attr('fill', '#c47a00')
-      .text(`Mean (${average.toFixed(1)})`);
+      .attr('fill', d => d.color)
+      .attr('stroke', 'white').attr('stroke-width', 3).attr('paint-order', 'stroke')
+      .attr('pointer-events', 'none')
+      .text(d => d.text)
+      .call(place, false)
+      .each(function() {
+        const box = this.getBBox();
+        const pad = 4;
+        if (box.x < pad - margin.left || box.x + box.width > w + margin.right - pad) d3.select(this).call(place, true);
+      });
 
     // Distribution drag handles — circle at peak of each distribution
     const handleData = d1 && d2 ? [
