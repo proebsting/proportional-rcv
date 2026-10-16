@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>STV Demonstration</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="vendor/d3.min.js"></script>
   <script src="engine.js"></script>
+  <script src="examples.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -170,6 +171,21 @@
       border: 1px solid #aaa; border-radius: 4px; background: #f5f5f5;
     }
     .toolbar button:hover, .toolbar label.btn:hover { background: #e8e8e8; }
+    [hidden] { display: none !important; }  /* so the hidden attribute beats display rules */
+    #example-panel {
+      margin: 0 0 20px; padding: 12px 16px; border: 1px solid #b6cbe6; border-radius: 6px;
+      background: #f3f7fc; font-size: 0.92em; line-height: 1.6;
+    }
+    #example-panel.unknown { border-color: #e0a800; background: #fff8e1; }
+    #example-panel h2 { margin: 0 0 6px; border: none; padding: 0; color: #1d3b63; }
+    #example-panel p { margin: 0 0 8px; }
+    #example-modified { font-weight: normal; color: #b05a00; font-size: 0.9em; }
+    #example-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.9em; }
+    #example-link { word-break: break-all; }
+    #example-actions button {
+      padding: 3px 10px; font-size: 0.95em; cursor: pointer;
+      border: 1px solid #aaa; border-radius: 4px; background: #fff;
+    }
     #example-select { padding: 5px 8px; font-size: 0.9em; border: 1px solid #aaa; border-radius: 4px; background: #f5f5f5; }
     #upload-error { font-size: 0.85em; color: #b00; }
     #load-notice { font-size: 0.85em; color: #5c4400; }
@@ -201,6 +217,16 @@
   There are no tie-break rules: any configuration that produces a tie (in a voter's ranking or in the count) is reported as invalid instead of being resolved.
   Adjust the distributions and candidate positions below and watch the results update in real time.
 </p>
+
+<div id="example-panel" hidden>
+  <h2><span id="example-title"></span> <span id="example-modified" hidden>(modified)</span></h2>
+  <div id="example-desc"></div>
+  <div id="example-actions">
+    <span class="example-link-label">Link:</span> <a id="example-link"></a>
+    <button id="example-copy">Copy link</button>
+    <button id="example-reset" hidden>Reset example</button>
+  </div>
+</div>
 
 <div class="toolbar">
   <select id="example-select" title="Load a built-in example">
@@ -1114,6 +1140,7 @@
     }
 
     tfoot.innerHTML = `<tr><td>Total</td><td>${tot1}</td><td>${tot2}</td><td>${tot1 + tot2}</td></tr>`;
+    refreshExamplePanel();
   }
 
   // --- Upload ---
@@ -1171,40 +1198,97 @@
       if (cfg.seats != null) setSlider('seats', cfg.seats);
 
       update();
+      return true;
     } catch(e) {
       err.textContent = 'Error: ' + e.message;
+      return false;
     }
   }
 
-  // --- Built-in examples ---
+  // --- Built-in examples (defined in examples.js) ---
 
-  // Off-grid originals were moved one unit toward the center (as an upload would be);
-  // each keeps its original winners and round sequence.
-  const BUILTIN_EXAMPLES = [
-    {
-      name: '2-of-4: two even blocs, 4 candidates, 2 seats',
-      config: {
-        distributions: [{ mean: 25, sd: 12, n: 1000 }, { mean: 75, sd: 12, n: 1000 }],
-        candidates: [18.5, 34.5, 64.5, 80.5],
-        seats: 2,
-      },
-    },
-    {
-      name: '3-of-6: 1:2 blocs, 6 candidates, 3 seats',
-      config: {
-        distributions: [{ mean: 30, sd: 12, n: 1000 }, { mean: 70, sd: 12, n: 2000 }],
-        candidates: [20.5, 28.5, 38.5, 52.5, 66.5, 82.5],
-        seats: 3,
-      },
-    },
-  ];
+  // The example currently loaded, and its config as loaded (to detect later changes)
+  let activeExample = null;  // { example, baseline }
 
   const exampleSelect = document.getElementById('example-select');
-  BUILTIN_EXAMPLES.forEach((ex, i) => exampleSelect.add(new Option(ex.name, i)));
+  EXAMPLES.forEach(ex => exampleSelect.add(new Option(ex.title, ex.id)));
   exampleSelect.addEventListener('change', function() {
-    if (this.value === '') return;
-    loadConfig({ config: BUILTIN_EXAMPLES[+this.value].config });
+    if (this.value !== '') loadExample(this.value);
     this.value = '';  // allow reloading the same example
+  });
+
+  function exampleURL(id) {
+    const url = new URL(location.href);
+    url.search = '';
+    url.hash = '';
+    if (id) url.searchParams.set('example', id);
+    return url.href;
+  }
+
+  // Keep the address bar in step with the loaded example so it can be bookmarked or shared
+  function setAddress(id) {
+    try { history.replaceState(null, '', exampleURL(id)); } catch (_) { /* e.g. some file:// pages */ }
+  }
+
+  function loadExample(id) {
+    const example = EXAMPLES.find(ex => ex.id === id);
+    if (!example) { showUnknownExample(id); return; }
+    if (!loadConfig({ config: example.config })) return;
+    activeExample = { example, baseline: JSON.stringify(currentConfig()) };
+    setAddress(id);
+    const panel = document.getElementById('example-panel');
+    panel.hidden = false;
+    panel.classList.remove('unknown');
+    document.getElementById('example-title').textContent = example.title;
+    document.getElementById('example-desc').innerHTML = example.description;
+    const link = document.getElementById('example-link');
+    link.href = link.textContent = exampleURL(id);
+    document.getElementById('example-actions').hidden = false;
+    refreshExamplePanel();
+  }
+
+  function clearExample() {
+    activeExample = null;
+    document.getElementById('example-panel').hidden = true;
+    setAddress(null);
+  }
+
+  function showUnknownExample(id) {
+    clearExample();
+    const panel = document.getElementById('example-panel');
+    panel.hidden = false;
+    panel.classList.add('unknown');
+    document.getElementById('example-title').textContent = `No example named “${id}”`;
+    document.getElementById('example-desc').innerHTML = '<p>Available examples:</p><ul>' +
+      EXAMPLES.map(ex => `<li><a href="${exampleURL(ex.id)}">${ex.id}</a> — ${ex.title}</li>`).join('') + '</ul>';
+    document.getElementById('example-actions').hidden = true;
+  }
+
+  // Called after every update: notes whether the settings still match the loaded example
+  function refreshExamplePanel() {
+    if (!activeExample) return;
+    const modified = JSON.stringify(currentConfig()) !== activeExample.baseline;
+    document.getElementById('example-modified').hidden = !modified;
+    document.getElementById('example-reset').hidden = !modified;
+  }
+
+  document.getElementById('example-reset').addEventListener('click', () => loadExample(activeExample.example.id));
+
+  document.getElementById('example-copy').addEventListener('click', async function() {
+    const text = document.getElementById('example-link').href;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (_) {
+      // The Clipboard API needs a secure context (https or localhost); fall back for plain http
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    this.textContent = 'Copied';
+    setTimeout(() => { this.textContent = 'Copy link'; }, 1500);
   });
 
   document.getElementById('upload-input').addEventListener('change', function() {
@@ -1213,7 +1297,7 @@
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        loadConfig(JSON.parse(e.target.result));
+        if (loadConfig(JSON.parse(e.target.result))) clearExample();
       } catch(_) {
         document.getElementById('upload-error').textContent = 'Error: invalid JSON';
       }
@@ -1223,6 +1307,23 @@
   });
 
   // --- Download ---
+
+  // The current settings, in the uploadable config format (enabled candidates only)
+  function currentConfig() {
+    const { d1, d2, candidates } = getParams();
+    return {
+      distributions: [
+        { mean: d1.mean, sd: d1.sd, n: d1.n },
+        { mean: d2.mean, sd: d2.sd, n: d2.n },
+      ],
+      candidates: candidates.map(c => c.pos),
+      numParties,
+      divLines: numParties >= 2 ? divLines.slice() : [],
+      candParties: numParties > 0 ? candidates.map(c => c.party) : [],
+      allowLeakage,
+      seats: +document.getElementById('seats').value,
+    };
+  }
 
   function buildDownloadJSON() {
     const { d1, d2, candidates, seats, counts1, counts2, totals, rankings, byPosition, stvResult, prop } = lastComputed;
@@ -1290,18 +1391,7 @@
     }
 
     return {
-      config: {
-        distributions: [
-          { mean: d1.mean, sd: d1.sd, n: d1.n },
-          { mean: d2.mean, sd: d2.sd, n: d2.n },
-        ],
-        candidates: candidates.map(c => c.pos),
-        numParties,
-        divLines: numParties >= 2 ? divLines.slice() : [],
-        candParties: numParties > 0 ? candidates.map(c => c.party) : [],
-        allowLeakage,
-        seats,
-      },
+      config: currentConfig(),
       votersByPosition,
       ballotGroups: rankings.map(r => ({ ranking: r.ranking.split(' > '), voters: r.count })),
       stv: stvOut,
@@ -1334,10 +1424,12 @@
   document.getElementById('show-median').addEventListener('change', update);
   document.getElementById('show-average').addEventListener('change', update);
 
-  // Initial render
+  // Initial render, then any example named in the URL (index.html?example=<id>)
   rebuildDivLines(0);
   rebuildCandSliders(4);
   update();
+  const requestedExample = new URLSearchParams(location.search).get('example');
+  if (requestedExample) loadExample(requestedExample);
 </script>
 </body>
 </html>

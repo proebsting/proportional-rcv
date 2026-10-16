@@ -1,5 +1,4 @@
-// Drives index.html in headless Chromium. D3 is served from node_modules so the test
-// does not depend on the CDN.
+// Drives index.html in headless Chromium.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -22,8 +21,6 @@ test.beforeEach(async () => {
   errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.route('https://d3js.org/**', route =>
-    route.fulfill({ path: path.join(ROOT, 'node_modules/d3/dist/d3.min.js'), contentType: 'text/javascript' }));
   await page.goto(PAGE_URL);
 });
 test.afterEach(async () => {
@@ -45,7 +42,7 @@ test('default configuration renders a valid result', async () => {
 });
 
 test('built-in examples load and reproduce their outcomes', async () => {
-  const expected = { 0: 'Elected: D, B', 1: 'Elected: E, F, D' };
+  const expected = { '2-of-4': 'Elected: D, B', '3-of-6': 'Elected: E, F, D' };
   for (const [value, text] of Object.entries(expected)) {
     await page.selectOption('#example-select', value);
     assert.equal(await summary(), text);
@@ -55,7 +52,7 @@ test('built-in examples load and reproduce their outcomes', async () => {
 
 test('loading a 3-seat example with fewer candidates showing keeps 3 seats', async () => {
   await setSlider('num-candidates', 2);
-  await page.selectOption('#example-select', '1');
+  await page.selectOption('#example-select', '3-of-6');
   assert.equal(await page.inputValue('#seats'), '3');
 });
 
@@ -105,7 +102,7 @@ test('a large election updates quickly enough to drag', async () => {
 });
 
 test('proportionality section for the 3-of-6 example', async () => {
-  await page.selectOption('#example-select', '1');
+  await page.selectOption('#example-select', '3-of-6');
   const text = await page.textContent('#prop-results');
   assert.match(text, /Distribution 1\s*998\s*33\.3%\s*1\.00\s*0\s*0\.0%/);
   assert.match(text, /Gallagher: 33\.\d\d/);
@@ -124,4 +121,44 @@ test('proportionality uses party groups when parties are on', async () => {
 test('proportionality is unavailable for an invalid configuration', async () => {
   await setSlider('c1-pos', await page.inputValue('#c0-pos'));
   assert.match(await page.textContent('#prop-results'), /Not available/);
+});
+
+test('?example=<id> loads the example with its explanation', async () => {
+  await page.goto(PAGE_URL + '?example=3-of-6');
+  assert.equal(await summary(), 'Elected: E, F, D');
+  assert.equal(await page.isVisible('#example-panel'), true);
+  assert.equal(await page.textContent('#example-title'), 'A one-third bloc wins no seats');
+  assert.match(await page.textContent('#example-desc'), /holds a full Droop quota/);
+  assert.match(await page.textContent('#example-link'), /index\.html\?example=3-of-6$/);
+  assert.equal(await page.isVisible('#example-modified'), false);
+});
+
+test('an unknown example name lists the available ones', async () => {
+  await page.goto(PAGE_URL + '?example=nope');
+  assert.match(await page.textContent('#example-title'), /No example named “nope”/);
+  const links = await page.$$eval('#example-desc a', as => as.map(a => a.textContent));
+  assert.deepEqual(links, ['2-of-4', '3-of-6']);
+  assert.equal(await page.isVisible('#example-actions'), false);
+});
+
+test('choosing an example from the menu puts its name in the URL', async () => {
+  await page.selectOption('#example-select', '2-of-4');
+  assert.match(page.url(), /\?example=2-of-4$/);
+});
+
+test('changing a loaded example marks it modified; reset restores it', async () => {
+  await page.goto(PAGE_URL + '?example=3-of-6');
+  await setSlider('d1-n', 2000);
+  assert.equal(await page.isVisible('#example-modified'), true);
+  await page.click('#example-reset');
+  assert.equal(await page.isVisible('#example-modified'), false);
+  assert.equal(await page.inputValue('#d1-n'), '1000');
+  assert.equal(await summary(), 'Elected: E, F, D');
+});
+
+test('uploading a config replaces the loaded example', async () => {
+  await page.goto(PAGE_URL + '?example=3-of-6');
+  await page.setInputFiles('#upload-input', path.join(ROOT, 'examples/2-of-4.json'));
+  await page.waitForFunction(() => document.getElementById('example-panel').hidden);
+  assert.doesNotMatch(page.url(), /example=/);
 });

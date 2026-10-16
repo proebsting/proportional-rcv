@@ -8,6 +8,7 @@ const {
   distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,
   bestDisproportionality, solidCoalitions, proportionality,
 } = require('../engine.js');
+const { EXAMPLES } = require('../examples.js');
 
 const label = i => String.fromCharCode(65 + i);
 const cands = positions => positions.map((pos, i) => ({ pos, label: label(i), party: null }));
@@ -266,4 +267,19 @@ test('proportionality', async t => {
     }
     assert.ok(checked > 50, `checked ${checked} coalitions`);
   });
+});
+
+test('built-in examples', async t => {
+  await t.test('ids are unique and URL-safe', () => {
+    const ids = EXAMPLES.map(ex => ex.id);
+    assert.equal(new Set(ids).size, ids.length);
+    for (const id of ids) assert.match(id, /^[a-z0-9]+(-[a-z0-9]+)*$/);
+  });
+  for (const ex of EXAMPLES) {
+    await t.test(`${ex.id} has text, is on the grid and has no ties`, () => {
+      assert.ok(ex.title && ex.description.trim());
+      assert.ok(ex.config.candidates.every(onGrid));
+      assert.equal(elect(ex.config).tie, null);
+    });
+  }
 });
