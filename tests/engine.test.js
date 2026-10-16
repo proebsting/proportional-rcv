@@ -8,6 +8,7 @@ const {
   distributeVoters, seatIntervalBoundaries, computeRankings, runSTV,
   distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,
   bestDisproportionality, solidCoalitions, proportionality,
+  seatIntervalWinners, configToQuery, queryToConfig,
 } = require('../engine.js');
 const { EXAMPLES } = require('../examples.js');
 
@@ -341,5 +342,41 @@ test('seat intervals', async t => {
     const a = electorate([{ mean: 30, sd: 12, n: 1500 }, { mean: 71, sd: 12, n: 1500 }]);
     const b = seatIntervalBoundaries(a, 4);
     b.forEach((x, k) => assert.ok(Math.abs(x + b[b.length - 1 - k] - 101) < 1e-9));
+  });
+});
+
+test('seat interval winners', () => {
+  const w = (label, pos) => ({ label, pos });
+  assert.deepEqual(seatIntervalWinners([33.2, 66.9], [w('E', 66.5), w('A', 20.5), w('F', 82.5)]),
+                   { intervals: [['A'], ['E'], ['F']], onBoundary: [] });
+  assert.deepEqual(seatIntervalWinners([33.2, 66.9], [w('D', 52.5), w('E', 66.5), w('F', 82.5)]).intervals,
+                   [[], ['D', 'E'], ['F']]);
+  assert.deepEqual(seatIntervalWinners([50.5], [w('A', 50.5), w('B', 70.5)]),
+                   { intervals: [[], ['B']], onBoundary: [{ label: 'A', between: [1, 2] }] });
+});
+
+test('setup links', async t => {
+  const plain = { distributions: [{ mean: 30, sd: 12, n: 1000 }, { mean: 70, sd: 12, n: 2000 }],
+                  candidates: [20.5, 28.5, 38.5], seats: 2, numParties: 0, divLines: [], candParties: [], allowLeakage: true };
+  const party = { ...plain, numParties: 3, divLines: [33.5, 66.5], candParties: [1, 2, 3], allowLeakage: false };
+  await t.test('readable form', () => {
+    assert.equal(configToQuery(plain), 'd1=30,12,1000&d2=70,12,2000&c=20.5,28.5,38.5&seats=2');
+    assert.equal(configToQuery(party), 'd1=30,12,1000&d2=70,12,2000&c=20.5,28.5,38.5&seats=2&parties=3&lines=33.5,66.5&cp=1,2,3&leak=0');
+  });
+  await t.test('round trip, including percent-encoded commas', () => {
+    for (const cfg of [plain, party]) {
+      const q = configToQuery(cfg);
+      assert.deepEqual(queryToConfig(new URLSearchParams(q)), cfg);
+      assert.deepEqual(queryToConfig(new URLSearchParams(q.replace(/,/g, '%2C'))), cfg);
+    }
+  });
+  await t.test('no setup in the link', () => {
+    assert.equal(queryToConfig(new URLSearchParams('example=3-of-6')), null);
+  });
+  await t.test('bad links name the bad parameter', () => {
+    assert.throws(() => queryToConfig(new URLSearchParams('c=20.5&seats=1')), /missing "d1"/);
+    assert.throws(() => queryToConfig(new URLSearchParams('d1=30,12&d2=70,12,2000&c=20.5&seats=1')), /"d1" should be 3 numbers/);
+    assert.throws(() => queryToConfig(new URLSearchParams('d1=30,12,1000&d2=70,12,2000&c=20.5,x&seats=1')), /"c" should be numbers/);
+    assert.throws(() => queryToConfig(new URLSearchParams('d1=30,12,1000&d2=70,12,2000&c=20.5,40.5&seats=1&parties=2&lines=50.5&cp=1')), /"cp" should be 2 numbers/);
   });
 });

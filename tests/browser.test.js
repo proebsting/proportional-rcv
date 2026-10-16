@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { chromium } = require('playwright');
+const { chromium, devices } = require('playwright');
 
 const ROOT = path.join(__dirname, '..');
 const PAGE_URL = pathToFileURL(path.join(ROOT, 'index.html')).href;
@@ -262,4 +262,90 @@ test('seat interval numbers are never covered by a drag handle', async () => {
       assert.deepEqual(covered, [], `${example}, ${seats} seats`);
     }
   }
+});
+
+// --- Results summary and details ---
+
+test('the summary under the chart gives winners, seat intervals and the Gallagher index', async () => {
+  await page.goto(PAGE_URL + '?example=3-of-6');
+  const text = (await page.textContent('#result-summary')).replace(/\s+/g, ' ');
+  assert.match(text, /Elected: E, F, D/);
+  assert.match(text, /interval 1 has none, interval 2 has two \(D, E\)/);
+  assert.match(text, /Gallagher index: 33\.30 \(best possible 0\.03\)/);
+  await page.selectOption('#example-select', '2-of-4');
+  assert.match(await page.textContent('#result-summary'), /one winner in each seat interval/);
+  await setSlider('c1-pos', await page.inputValue('#c0-pos'));
+  assert.match(await page.textContent('#result-summary'), /No result: the configuration has a tie/);
+});
+
+test('the round-by-round count stays open across updates once opened', async () => {
+  assert.equal(await page.$eval('#stv-details', d => d.open), false);
+  await page.click('#stv-details > summary');
+  await setSlider('d1-n', 1500);
+  assert.equal(await page.$eval('#stv-details', d => d.open), true);
+  assert.equal(await page.isVisible('#stv-details .stv-progression'), true);
+});
+
+// --- Setup links ---
+
+const linkFor = () => page.evaluate(() => setupURL());
+const configOf = p => p.evaluate(() => JSON.stringify(currentConfig()));
+
+test('a setup link reproduces the setup, including parties', async () => {
+  await setSlider('d1-mean', 22); await setSlider('d2-n', 3100);
+  await setSlider('num-parties', 2);
+  await page.$eval('#allow-leakage', el => { el.checked = false; el.dispatchEvent(new Event('change')); });
+  await page.selectOption('#c3-party', '2');
+  await setSlider('c2-pos', 58.5);
+  const link = await linkFor();
+  assert.match(link, /\?d1=22,12,1000&d2=70,12,3100&c=20\.5,40\.5,58\.5,80\.5&seats=2&parties=2&lines=50\.5&cp=1,1,1,2&leak=0$/);
+  const other = await browser.newPage();
+  await other.goto(link);
+  assert.equal(await configOf(other), await configOf(page));
+  assert.equal(await other.textContent('.stv-summary'), await page.textContent('.stv-summary'));
+  await other.close();
+});
+
+test('an unmodified example links by name; a modified one adds its settings', async () => {
+  await page.goto(PAGE_URL + '?example=3-of-6');
+  assert.match(await linkFor(), /\?example=3-of-6$/);
+  await setSlider('c3-pos', 48.5);
+  const link = await linkFor();
+  assert.match(link, /\?example=3-of-6&d1=.*&c=20\.5,28\.5,38\.5,48\.5,66\.5,82\.5/);
+  const other = await browser.newPage();
+  await other.goto(link);
+  assert.equal(await other.textContent('#example-title'), 'A one-third bloc wins no seats');
+  assert.equal(await other.isVisible('#example-modified'), true);
+  assert.equal(await configOf(other), await configOf(page));
+  assert.match(other.url(), /&c=/, 'address bar keeps the full link');
+  await other.close();
+});
+
+test('a bad setup link explains the problem', async () => {
+  await page.goto(PAGE_URL + '?d1=30,12&d2=70,12,2000&c=20.5&seats=1');
+  assert.match(await page.textContent('#upload-error'), /"d1" should be 3 numbers/);
+});
+
+// --- Phones ---
+
+test('on a phone the page fits the screen and the chart redraws when rotated', async () => {
+  const ctx = await browser.newContext({ ...devices['iPhone 13'] });
+  const phone = await ctx.newPage();
+  const phoneErrors = [];
+  phone.on('pageerror', e => phoneErrors.push(e.message));
+  await phone.goto(PAGE_URL + '?example=3-of-6');
+  const fit = () => phone.evaluate(() => ({
+    page: document.documentElement.scrollWidth, screen: innerWidth,
+    chart: document.querySelector('#histogram g').getBoundingClientRect().right,
+  }));
+  let m = await fit();
+  assert.ok(m.page <= m.screen, `no sideways scrolling (${m.page} > ${m.screen})`);
+  assert.ok(m.chart <= m.screen, 'chart fits');
+  await phone.setViewportSize({ width: 844, height: 390 });  // landscape
+  // The redraw happens on the next animation frame; wait for the drawing itself to widen
+  await phone.waitForFunction(() => document.querySelector('#histogram g').getBoundingClientRect().right > 700, null, { timeout: 3000 });
+  m = await fit();
+  assert.ok(m.chart > 700 && m.chart <= m.screen, `chart redrawn at the new width (${m.chart})`);
+  assert.deepEqual(phoneErrors, []);
+  await ctx.close();
 });

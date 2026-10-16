@@ -1,5 +1,5 @@
 # Publishes the site to GitHub Pages on every push to main, after the tests pass.
-# Only the files copied into _site below are published.
+# Only the files scripts/build-site.sh copies into _site are published.
 name: Publish site
 
 on:
@@ -39,9 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Collect the site files
-        run: |
-          mkdir _site
-          cp -r index.html engine.js examples.js vendor _site/
+        run: sh scripts/build-site.sh _site "${GITHUB_SHA:0:7}"
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site

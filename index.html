@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STV Demonstration</title>
   <script src="vendor/d3.min.js"></script>
   <script src="engine.js"></script>
@@ -171,7 +172,20 @@
       border: 1px solid #aaa; border-radius: 4px; background: #f5f5f5;
     }
     .toolbar button:hover, .toolbar label.btn:hover { background: #e8e8e8; }
-    [hidden] { display: none !important; }  /* so the hidden attribute beats display rules */
+    [hidden] { display: none !important; }
+    #result-summary { margin: 8px 0 0; font-size: 0.92em; line-height: 1.6; }
+    #result-summary.invalid { color: #5c4400; }
+    .detail-block > summary { cursor: pointer; color: #1d5fa8; font-size: 0.92em; margin: 4px 0 8px; }
+    .scroll-x { overflow-x: auto; }
+    /* Narrow screens (phones) */
+    @media (max-width: 640px) {
+      body { margin: 16px auto; padding: 0 12px; }
+      h1 { font-size: 1.2em; }
+      .param-grid { grid-template-columns: 92px 1fr 44px; gap: 6px 8px; }
+      .seats-row { gap: 10px; }
+      .seats-row label { min-width: 0; }
+      .seats-row input[type=range] { width: auto; flex: 1; }
+    }  /* so the hidden attribute beats display rules */
     #example-panel {
       margin: 0 0 20px; padding: 12px 16px; border: 1px solid #b6cbe6; border-radius: 6px;
       background: #f3f7fc; font-size: 0.92em; line-height: 1.6;
@@ -235,8 +249,21 @@
   <label class="btn" for="upload-input">⬆ Upload config</label>
   <input type="file" id="upload-input" accept=".json" style="display:none">
   <button id="download-btn">⬇ Download results</button>
+  <button id="share-btn" title="Copy a link that opens this page with the current settings">🔗 Copy link to this setup</button>
   <span id="upload-error"></span>
   <span id="load-notice"></span>
+</div>
+
+<div class="section">
+  <h2>Voter Distribution</h2>
+  <p class="section-desc">Combined histogram of all voters across the spectrum. Candidate positions are shown as vertical lines — green with a checkmark if elected, red with an ✗ if eliminated. The dashed <span style="color:#5b4fcf">purple</span> line marks the <strong>median</strong> voter and the dashed <span style="color:#c47a00">orange</span> line marks the <strong>mean</strong>. The numbered <span style="color:#0e8a7e">teal</span> bands are the <strong>seat intervals</strong>: one per seat, each holding an equal share of the voters (a Hare quota). A proportional result has one winner in each interval. Drag the <span style="color:#2a72c3"><strong>blue (D1)</strong></span> or <span style="color:#b03a2a"><strong>red (D2)</strong></span> handle to adjust that distribution interactively.</p>
+  <div style="margin-bottom:8px; font-size:0.85em; display:flex; gap:16px;">
+    <label><input type="checkbox" id="show-median" checked> Show median</label>
+    <label><input type="checkbox" id="show-average" checked> Show average</label>
+    <label><input type="checkbox" id="show-seat-intervals" checked> Show seat intervals</label>
+  </div>
+  <svg id="histogram"></svg>
+  <div id="result-summary"></div>
 </div>
 
 <div class="section">
@@ -313,24 +340,7 @@
   </div>
 </div>
 
-<div class="section">
-  <h2>Voter Distribution</h2>
-  <p class="section-desc">Combined histogram of all voters across the spectrum. Candidate positions are shown as vertical lines — green with a checkmark if elected, red with an ✗ if eliminated. The dashed <span style="color:#5b4fcf">purple</span> line marks the <strong>median</strong> voter and the dashed <span style="color:#c47a00">orange</span> line marks the <strong>mean</strong>. The numbered <span style="color:#0e8a7e">teal</span> bands are the <strong>seat intervals</strong>: one per seat, each holding an equal share of the voters (a Hare quota). A proportional result has one winner in each interval. Drag the <span style="color:#2a72c3"><strong>blue (D1)</strong></span> or <span style="color:#b03a2a"><strong>red (D2)</strong></span> handle to adjust that distribution interactively.</p>
-  <div style="margin-bottom:8px; font-size:0.85em; display:flex; gap:16px;">
-    <label><input type="checkbox" id="show-median" checked> Show median</label>
-    <label><input type="checkbox" id="show-average" checked> Show average</label>
-    <label><input type="checkbox" id="show-seat-intervals" checked> Show seat intervals</label>
-  </div>
-  <svg id="histogram"></svg>
-</div>
-
-<div class="section">
-  <h2>STV Results</h2>
-  <p class="section-desc">Round-by-round results of the STV count. The ballot progression table shows how each ballot group's votes are used or transferred across rounds. Each subsequent round shows either every candidate who has reached the Droop quota being elected together (their surpluses transferred fractionally and simultaneously) or the lowest candidate being eliminated (their votes redistributed to next preferences). The count uses exact fractions; if two or more candidates are tied for lowest, the configuration is invalid.</p>
-  <div id="stv-results"></div>
-</div>
-
-<div class="section">
+<div class="section" id="prop-section">
   <h2>Proportionality</h2>
   <p class="section-desc">How closely each group's share of the seats matches its share of the voters. Without parties, the groups are the two voter distributions, and each winner counts for the distribution with more voters at the candidate's position (an exact tie splits the seat). With parties, voters are grouped by the dividing lines and winners by their party label.
     The <strong>Gallagher</strong> index (√(½ Σ (vote % − seat %)²)) is the standard measure; <strong>Loosemore–Hanby</strong> (½ Σ |vote % − seat %|) is the percentage of seats held beyond vote share. 0 is perfectly proportional. With few seats some disproportionality is unavoidable, so each is shown against the <strong>best achievable</strong> with this many seats; the difference is what STV adds.
@@ -338,9 +348,17 @@
   <div id="prop-results"></div>
 </div>
 
+<div class="section" id="stv-section">
+  <h2>STV Results</h2>
+  <p class="section-desc">Round-by-round results of the STV count. The ballot progression table shows how each ballot group's votes are used or transferred across rounds. Each subsequent round shows either every candidate who has reached the Droop quota being elected together (their surpluses transferred fractionally and simultaneously) or the lowest candidate being eliminated (their votes redistributed to next preferences). The count uses exact fractions; if two or more candidates are tied for lowest, the configuration is invalid.</p>
+  <div id="stv-results"></div>
+</div>
+
 <div class="section">
   <h2>Ranked Ballot Distribution</h2>
   <p class="section-desc">Every distinct ballot ranking that appears in this election and the number of voters who hold it. Candidates a voter is equidistant from are shown joined by “=”; any such tie makes the configuration invalid.</p>
+  <details class="detail-block" id="rankings-details">
+  <summary>Show ballots</summary>
   <div id="rankings-table-wrap">
     <table id="rankings-table">
       <thead>
@@ -353,11 +371,14 @@
       <tfoot id="rankings-table-foot"></tfoot>
     </table>
   </div>
+  </details>
 </div>
 
 <div class="section">
   <h2>Voter Counts by Position</h2>
   <p class="section-desc">The full breakdown of how many voters from each distribution fall at each integer position on the spectrum. Positions with zero voters are omitted.</p>
+  <details class="detail-block" id="voter-details">
+  <summary>Show voter counts</summary>
   <div id="voter-table-wrap">
     <table id="voter-table">
       <thead>
@@ -372,6 +393,7 @@
       <tfoot id="voter-table-foot"></tfoot>
     </table>
   </div>
+  </details>
 </div>
 
 <script>
@@ -1013,6 +1035,10 @@
   // rankingTies: from computeRankings; stvResult: from runSTV, or null when rankings are tied
   function drawSTV(rankings, rankingTies, stvResult, seats, candidates) {
     const container = document.getElementById('stv-results');
+    // Read the open state from the element about to be replaced: it is current immediately
+    // after a click, while the toggle event arrives later
+    const existing = container.querySelector('#stv-details');
+    if (existing) stvDetailsOpen = existing.open;
     if (!rankings.length) { container.innerHTML = ''; return; }
 
     if (rankingTies.length) {
@@ -1028,7 +1054,10 @@
     }
     html += `<p><strong>Total votes:</strong> ${totalVotes} &nbsp;|&nbsp;
                    <strong>Droop quota:</strong> ${quota} &nbsp;|&nbsp;
-                   <strong>Seats:</strong> ${seats}</p>
+                   <strong>Seats:</strong> ${seats}</p>`;
+    if (!tie) html += `<p class="stv-summary">Elected: ${elected.join(', ')}</p>`;
+    html += `<details class="detail-block" id="stv-details" ${stvDetailsOpen ? 'open' : ''}>
+               <summary>Show the round-by-round count</summary>
                <div class="stv-round">
                  <h3>Ballot progression</h3>
                  ${buildProgressionTable(rankings, steps)}
@@ -1064,11 +1093,48 @@
         <h3>Round ${tie.round}: <span style="color:${TIE_COLOR}">tie for fewest votes between ${tie.candidates.join(' and ')}</span></h3>
         <div class="stv-tables">${tallyTableHTML(tie.tally, quota, new Set(tie.candidates), 'tie')}</div>
       </div>`;
-    } else {
-      html += `<p class="stv-summary">Elected: ${elected.join(', ')}</p>`;
     }
+    html += '</details>';
     container.innerHTML = html;
   }
+
+  // Short result line under the chart: the winners, how they sit in the seat intervals, and
+  // the headline proportionality index
+  function drawResultSummary({ valid, stvResult, prop, winners, bounds, seats }) {
+    const el = document.getElementById('result-summary');
+    if (!stvResult && !valid) {
+      el.className = 'invalid';
+      el.innerHTML = 'No result: the configuration has a tie. <a href="#stv-section">See why</a>';
+      return;
+    }
+    if (!valid) {
+      el.className = 'invalid';
+      el.innerHTML = 'No result: the count reaches a tie. <a href="#stv-section">See why</a>';
+      return;
+    }
+    el.className = '';
+    const parts = [`<strong>Elected:</strong> ${stvResult.elected.join(', ')}`];
+    if (seats > 1) {
+      const { intervals, onBoundary } = seatIntervalWinners(bounds, winners);
+      const counts = intervals.map(w => w.length);
+      let text;
+      if (!onBoundary.length && counts.every(n => n === 1)) {
+        text = 'one winner in each seat interval';
+      } else {
+        const words = ['none', 'one', 'two', 'three', 'four', 'five'];
+        const odd = intervals.flatMap((w, k) => w.length === 1 ? [] :
+          [`interval ${k + 1} has ${w.length ? `${words[w.length] ?? w.length} (${w.join(', ')})` : 'none'}`]);
+        const edge = onBoundary.map(b => `${b.label} is on the boundary of intervals ${b.between.join(' and ')}`);
+        text = [...odd, ...edge].join(', ');
+      }
+      parts.push(`<strong>Seat intervals:</strong> ${text}`);
+    }
+    parts.push(`<strong>Gallagher index:</strong> ${prop.gallagher.toFixed(2)} (best possible ${prop.best.gallagher.toFixed(2)})
+                <a href="#prop-section">details</a>`);
+    el.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+  }
+
+  let stvDetailsOpen = false;  // the round-by-round section is redrawn on every update, so remember it
 
   // --- Proportionality rendering ---
 
@@ -1097,10 +1163,10 @@
     }).join('');
 
     container.innerHTML = `
-      <table class="stv-table">
+      <div class="scroll-x"><table class="stv-table">
         <thead><tr><th>Group</th><th>Voters</th><th>Vote share</th><th>Ideal seats</th><th>Seats won</th><th>Seat share</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>
+      </table></div>
       <div class="prop-indices">
         ${index('Gallagher', prop.gallagher, prop.best.gallagher)}<br>
         ${index('Loosemore–Hanby', prop.loosemoreHanby, prop.best.loosemoreHanby)}
@@ -1140,14 +1206,15 @@
     };
 
     let prop = null;
+    const winners = valid ? candidates.filter(c => stvResult.elected.includes(c.label)) : [];
     if (valid) {
-      const winners = candidates.filter(c => stvResult.elected.includes(c.label));
       const groups = numParties >= 2
         ? partyGroups(totals, divLines, byPosition, winners)
         : distributionGroups([counts1, counts2], byPosition, winners);
       prop = proportionality(groups, seats, stvResult.quota, candidates.length, stvResult.elected);
     }
     drawProportionality(prop);
+    drawResultSummary({ valid, stvResult, prop, winners, bounds: seatIntervalBoundaries(totals, seats), seats });
 
     lastComputed = valid
       ? { d1, d2, candidates, seats, counts1, counts2, totals, rankings, byPosition, stvResult, prop } : null;
@@ -1215,6 +1282,8 @@
       if (!cfg.distributions || cfg.distributions.length < 1) throw new Error('Missing distributions');
       if (!Array.isArray(cfg.candidates) || cfg.candidates.length < 1) throw new Error('Missing candidates');
       // Checked before anything changes, so a bad file leaves the current settings alone
+      const np = cfg.numParties ?? 0;
+      if (!(np === 0 || (Number.isInteger(np) && np >= 2 && np <= 10))) throw new Error('numParties must be 0 or 2–10');
       const cfgLines = Math.max(0, (cfg.numParties ?? 0) - 1);
       if (Array.isArray(cfg.divLines) && cfg.divLines.length === cfgLines && !validDivLines(cfg.divLines)) {
         throw new Error(`divLines must be half-integers from ${DIV_MIN} to ${DIV_MAX}, increasing, at least 1 apart`);
@@ -1330,8 +1399,8 @@
 
   document.getElementById('example-reset').addEventListener('click', () => loadExample(activeExample.example.id));
 
-  document.getElementById('example-copy').addEventListener('click', async function() {
-    const text = document.getElementById('example-link').href;
+  // Copy text to the clipboard, briefly showing "Copied" on the button
+  async function copyText(text, button) {
     try {
       await navigator.clipboard.writeText(text);
     } catch (_) {
@@ -1343,8 +1412,28 @@
       document.execCommand('copy');
       ta.remove();
     }
-    this.textContent = 'Copied';
-    setTimeout(() => { this.textContent = 'Copy link'; }, 1500);
+    const label = button.textContent;
+    button.textContent = 'Copied';
+    setTimeout(() => { button.textContent = label; }, 1500);
+  }
+
+  document.getElementById('example-copy').addEventListener('click', function() {
+    copyText(document.getElementById('example-link').href, this);
+  });
+
+  // Link to the current settings. A loaded example keeps its name, so its explanation shows;
+  // if it has been changed, the settings follow and the panel marks it modified.
+  function setupURL() {
+    const query = configToQuery(currentConfig());
+    if (activeExample) {
+      const modified = JSON.stringify(currentConfig()) !== activeExample.baseline;
+      return exampleURL(activeExample.example.id) + (modified ? '&' + query : '');
+    }
+    return exampleURL(null) + '?' + query;
+  }
+
+  document.getElementById('share-btn').addEventListener('click', function() {
+    copyText(setupURL(), this);
   });
 
   document.getElementById('upload-input').addEventListener('change', function() {
@@ -1481,12 +1570,35 @@
   document.getElementById('show-average').addEventListener('change', update);
   document.getElementById('show-seat-intervals').addEventListener('change', update);
 
+  // Redraw at the new width when the window is resized or a phone is rotated
+  let resizeFrame = null;
+  let lastWidth = svgEl.clientWidth;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+      if (svgEl.clientWidth !== lastWidth) { lastWidth = svgEl.clientWidth; update(); }
+    });
+  });
+
   // Initial render, then any example named in the URL (index.html?example=<id>)
   rebuildDivLines(0);
   rebuildCandSliders(4);
   update();
-  const requestedExample = new URLSearchParams(location.search).get('example');
-  if (requestedExample) loadExample(requestedExample);
+  {
+    const requested = location.href;
+    const params = new URLSearchParams(location.search);
+    let linked = null;
+    try {
+      linked = queryToConfig(params);
+    } catch (e) {
+      document.getElementById('upload-error').textContent = `Error: ${e.message}`;
+    }
+    if (params.get('example')) loadExample(params.get('example'));
+    if (linked && loadConfig({ config: linked })) {
+      // loadExample rewrote the address to the bare example; keep the full link instead
+      try { history.replaceState(null, '', requested); } catch (_) { /* e.g. some file:// pages */ }
+    }
+  }
 </script>
 </body>
 </html>

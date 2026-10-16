@@ -83,6 +83,21 @@ function seatIntervalBoundaries(totals, seats) {
   return bounds;
 }
 
+// Which winners ({ label, pos }) fall in each seat interval. A winner exactly on a boundary
+// belongs to neither side and is reported separately, so no tie-break is needed.
+// Returns { intervals: [[labels], ...] (one per seat), onBoundary: [{ label, between: [k, k + 1] }] }
+// with intervals numbered from 1 in `between`.
+function seatIntervalWinners(bounds, winners) {
+  const intervals = Array.from({ length: bounds.length + 1 }, () => []);
+  const onBoundary = [];
+  for (const w of [...winners].sort((a, b) => a.pos - b.pos)) {
+    const k = bounds.indexOf(w.pos);
+    if (k >= 0) onBoundary.push({ label: w.label, between: [k + 1, k + 2] });
+    else intervals[bounds.filter(x => x < w.pos).length].push(w.label);
+  }
+  return { intervals, onBoundary };
+}
+
 // --- Rankings ---
 
 // Returns party number (1-indexed) for a voter at position v, based on dividing lines
@@ -384,13 +399,60 @@ function proportionality(groups, seats, quota, numCandidates, elected) {
   };
 }
 
+// --- Setup links ---
+
+// A setup (the config format of uploads and downloads) as a readable URL query:
+//   d1=30,12,1000&d2=70,12,2000&c=20.5,28.5,38.5&seats=3
+// with distributions as mean,sd,voters, plus parties=, lines= and cp= (each candidate's party)
+// when parties are used, and leak=0 when leakage is off. Commas are left unescaped; they are
+// legal in a query and keep the link readable.
+function configToQuery(cfg) {
+  const [d1, d2] = cfg.distributions;
+  const parts = [`d1=${d1.mean},${d1.sd},${d1.n}`, `d2=${d2.mean},${d2.sd},${d2.n}`,
+                 `c=${cfg.candidates.join(',')}`, `seats=${cfg.seats}`];
+  if (cfg.numParties > 0) {
+    parts.push(`parties=${cfg.numParties}`);
+    if (cfg.divLines.length) parts.push(`lines=${cfg.divLines.join(',')}`);
+    parts.push(`cp=${cfg.candParties.join(',')}`);
+  }
+  if (cfg.allowLeakage === false) parts.push('leak=0');
+  return parts.join('&');
+}
+
+// The setup in URL parameters (a URLSearchParams), or null if they hold none (no "c").
+// Throws an Error naming the first bad parameter; values are range-checked when loaded.
+function queryToConfig(params) {
+  if (!params.has('c')) return null;
+  const nums = (key, count) => {
+    const raw = params.get(key);
+    if (raw === null || raw === '') throw new Error(`the link is missing "${key}"`);
+    const list = raw.split(',').map(Number);
+    if (list.some(x => !Number.isFinite(x)) || (count && list.length !== count)) {
+      throw new Error(`the link's "${key}" should be ${count ? `${count} numbers` : 'numbers'} separated by commas`);
+    }
+    return list;
+  };
+  const dist = key => { const [mean, sd, n] = nums(key, 3); return { mean, sd, n }; };
+  const cfg = {
+    distributions: [dist('d1'), dist('d2')],
+    candidates: nums('c'),
+    seats: nums('seats', 1)[0],
+    numParties: params.has('parties') ? nums('parties', 1)[0] : 0,
+    allowLeakage: params.get('leak') !== '0',
+  };
+  cfg.divLines = cfg.numParties >= 2 ? nums('lines', cfg.numParties - 1) : [];
+  cfg.candParties = cfg.numParties > 0 ? nums('cp', cfg.candidates.length) : [];
+  return cfg;
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     CAND_MIN, CAND_MAX, clampCand, onGrid, snapToGrid, snapTowardCenter,
     DIV_MIN, DIV_MAX, clampDivLine, normalizeDivLines, validDivLines,
-    normalPDF, distributeVoters, seatIntervalBoundaries, getVoterParty, computeRankings,
+    normalPDF, distributeVoters, seatIntervalBoundaries, seatIntervalWinners, getVoterParty, computeRankings,
     Q, qadd, qsub, qmul, qdiv, qcmp, qnum, runSTV,
     distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,
     bestDisproportionality, solidCoalitions, proportionality,
+    configToQuery, queryToConfig,
   };
 }
