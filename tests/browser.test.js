@@ -184,3 +184,52 @@ test('median and mean labels never overlap and stay inside the chart', async () 
   const { labels } = await boxes();
   assert.equal(labels.length, 1);
 });
+
+test('party dividing lines cannot be moved past each other', async () => {
+  await setSlider('num-parties', 3);
+  const lines = () => page.evaluate(() => [0, 1].map(k => +document.getElementById(`divline-${k}`).value));
+  const [first, second] = await lines();
+  await setSlider('divline-0', 90.5);  // slider: stops one short of line 2
+  assert.deepEqual(await lines(), [second - 1, second]);
+  // Drag line 2 on the histogram (mouse actions need it on screen)
+  const dragLine2 = async dx => {
+    const handle = page.locator('#histogram g.div-line').nth(1);
+    await handle.scrollIntoViewIfNeeded();
+    const box = await handle.boundingBox();
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + box.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + dx, y, { steps: 10 });
+    await page.mouse.up();
+  };
+  await dragLine2(-600);  // already against line 1: can't move left
+  assert.deepEqual(await lines(), [second - 1, second]);
+  await dragLine2(+150);  // the drag works: moves right
+  const [, moved] = await lines();
+  assert.ok(moved > second, `line 2 moved right (${moved})`);
+  await setSlider('divline-0', first);
+  await dragLine2(-900);  // far left: stops one past line 1
+  assert.deepEqual(await lines(), [first, first + 1]);
+});
+
+test('adding a party after moving a line keeps the lines in order', async () => {
+  await setSlider('num-parties', 2);
+  await setSlider('divline-0', 90.5);
+  await setSlider('num-parties', 3);  // default for the new line would be 66.5
+  const lines = await page.evaluate(() => [0, 1].map(k => +document.getElementById(`divline-${k}`).value));
+  assert.deepEqual(lines, [90.5, 91.5]);
+});
+
+test('uploading crossed dividing lines is rejected and changes nothing', async () => {
+  const before = await page.inputValue('#d1-mean');
+  await page.setInputFiles('#upload-input', {
+    name: 'crossed.json', mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ config: {
+      distributions: [{ mean: 10, sd: 5, n: 1000 }, { mean: 90, sd: 5, n: 1000 }],
+      candidates: [20.5, 80.5], numParties: 3, divLines: [60.5, 40.5], candParties: [1, 3], seats: 1,
+    } })),
+  });
+  await page.waitForFunction(() => document.getElementById('upload-error').textContent !== '');
+  assert.match(await page.textContent('#upload-error'), /divLines must be/);
+  assert.equal(await page.inputValue('#d1-mean'), before);
+});

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   CAND_MIN, CAND_MAX, onGrid, snapToGrid, snapTowardCenter,
+  DIV_MIN, DIV_MAX, clampDivLine, normalizeDivLines, validDivLines,
   distributeVoters, computeRankings, runSTV,
   distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,
   bestDisproportionality, solidCoalitions, proportionality,
@@ -282,4 +283,40 @@ test('built-in examples', async t => {
       assert.equal(elect(ex.config).tie, null);
     });
   }
+});
+
+test('party dividing lines', async t => {
+  await t.test('a moved line stops one unit short of its neighbors and the ends', () => {
+    const lines = [30.5, 50.5, 70.5];
+    assert.equal(clampDivLine(lines, 1, 90), 69.5);
+    assert.equal(clampDivLine(lines, 1, 10), 31.5);
+    assert.equal(clampDivLine(lines, 1, 60.2), 60.5);
+    assert.equal(clampDivLine(lines, 0, -5), DIV_MIN);
+    assert.equal(clampDivLine(lines, 2, 500), DIV_MAX);
+  });
+  await t.test('normalizing leaves valid lines alone and fixes invalid ones minimally', () => {
+    assert.deepEqual(normalizeDivLines([20.5, 40.5, 60.5]), [20.5, 40.5, 60.5]);
+    assert.deepEqual(normalizeDivLines([80.5, 66.5]), [80.5, 81.5]);             // crossed: pushed apart
+    assert.deepEqual(normalizeDivLines([99.5, 99.5, 99.5]), [97.5, 98.5, 99.5]);  // crowded at the end
+    assert.deepEqual(normalizeDivLines([0, 0]), [1.5, 2.5]);
+  });
+  await t.test('normalized lines are always increasing, at least 1 apart and in range', () => {
+    let rng = 99;
+    const rand = m => (rng = (rng * 1103515245 + 12345) % 2 ** 31) % m;
+    for (let trial = 0; trial < 500; trial++) {
+      const out = normalizeDivLines(Array.from({ length: 1 + rand(9) }, () => rand(120) - 10 + rand(10) / 10));
+      assert.ok(validDivLines(out));
+      out.forEach((x, k) => {
+        assert.ok(x >= DIV_MIN && x <= DIV_MAX && x % 1 === 0.5);
+        if (k > 0) assert.ok(x >= out[k - 1] + 1);
+      });
+    }
+  });
+  await t.test('validity', () => {
+    assert.ok(validDivLines([50.5]));
+    assert.ok(validDivLines([]));
+    assert.ok(!validDivLines([60.5, 40.5]));
+    assert.ok(!validDivLines([40.5, 40.5]));
+    assert.ok(!validDivLines([50]));
+  });
 });

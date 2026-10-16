@@ -21,6 +21,32 @@ function snapTowardCenter(x) {
   return clampCand(CAND_MIN + 2 * (x < 50.5 ? Math.ceil(k) : Math.floor(k)));
 }
 
+// --- Party dividing lines ---
+
+// N parties are separated by N - 1 dividing lines at half-integers in 1.5..99.5. Party
+// numbers follow region order, so the lines must never cross: they stay in increasing order
+// at least 1 apart, which also keeps at least one voter position in every party's region.
+const DIV_MIN = 1.5, DIV_MAX = 99.5;
+
+// Where line k ends up when moved toward x: snapped to a half-integer, stopped by its neighbors
+function clampDivLine(lines, k, x) {
+  const lo = k > 0 ? lines[k - 1] + 1 : DIV_MIN;
+  const hi = k < lines.length - 1 ? lines[k + 1] - 1 : DIV_MAX;
+  return Math.max(lo, Math.min(hi, Math.floor(x) + 0.5));
+}
+
+// The nearest valid set of lines (valid lines are returned unchanged): a forward pass pushes
+// each line right of its predecessor, then a backward pass pulls each left of its successor.
+// Always possible, as at most 98 lines fit in 1.5..99.5.
+function normalizeDivLines(lines) {
+  const out = lines.map(x => Math.floor(x) + 0.5);
+  for (let k = 0; k < out.length; k++) out[k] = Math.max(out[k], k > 0 ? out[k - 1] + 1 : DIV_MIN);
+  for (let k = out.length - 1; k >= 0; k--) out[k] = Math.min(out[k], k < out.length - 1 ? out[k + 1] - 1 : DIV_MAX);
+  return out;
+}
+
+const validDivLines = lines => lines.every((x, k) => x === normalizeDivLines(lines)[k]);
+
 // --- Voter model ---
 
 function normalPDF(x, mean, sd) {
@@ -345,6 +371,7 @@ function proportionality(groups, seats, quota, numCandidates, elected) {
 if (typeof module !== 'undefined') {
   module.exports = {
     CAND_MIN, CAND_MAX, clampCand, onGrid, snapToGrid, snapTowardCenter,
+    DIV_MIN, DIV_MAX, clampDivLine, normalizeDivLines, validDivLines,
     normalPDF, distributeVoters, getVoterParty, computeRankings,
     Q, qadd, qsub, qmul, qdiv, qcmp, qnum, runSTV,
     distributionGroups, partyGroups, gallagherIndex, loosemoreHanbyIndex,

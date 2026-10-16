@@ -491,14 +491,27 @@
     return Math.floor(100 * k / n) + 0.5;
   }
 
+  // Move line k toward x, stopping at its neighbors so the lines never cross; the slider
+  // (which can't know about the neighbors) is set back to where the line actually is
+  function setDivLine(k, x) {
+    divLines[k] = clampDivLine(divLines, k, x);
+    const slider = document.getElementById(`divline-${k}`);
+    if (slider) {
+      slider.value = divLines[k];
+      document.getElementById(`divline-${k}-val`).textContent = divLines[k];
+    }
+    update();
+  }
+
   function rebuildDivLines(n) {
     const numLines = Math.max(0, n - 1);
-    // Extend with defaults or trim
+    // Extend with defaults or trim; a default can land left of a line the user has moved
+    // right, so restore the order with the smallest change
     while (divLines.length < numLines) {
       const k = divLines.length + 1;
       divLines.push(defaultDivLine(k, n));
     }
-    divLines = divLines.slice(0, numLines);
+    divLines = normalizeDivLines(divLines.slice(0, numLines));
 
     const section = document.getElementById('div-lines-section');
     if (numLines === 0) { section.innerHTML = ''; return; }
@@ -511,13 +524,11 @@
       row.style.marginBottom = '4px';
       row.innerHTML = `
         <label style="font-size:0.85em;">Party ${k+1} | Party ${k+2}</label>
-        <input type="range" id="divline-${k}" min="1.5" max="99.5" step="1" value="${val}">
+        <input type="range" id="divline-${k}" min="${DIV_MIN}" max="${DIV_MAX}" step="1" value="${val}">
         <span class="val" id="divline-${k}-val">${val}</span>`;
       section.appendChild(row);
       row.querySelector(`#divline-${k}`).addEventListener('input', function() {
-        divLines[k] = +this.value;
-        document.getElementById(`divline-${k}-val`).textContent = this.value;
-        update();
+        setDivLine(k, +this.value);
       });
     }
   }
@@ -629,16 +640,7 @@
     });
 
   const divLineDrag = d3.drag()
-    .on('drag', function(event, d) {
-      const snapped = Math.max(1.5, Math.min(99.5, Math.floor(xScale.invert(event.x)) + 0.5));
-      divLines[d.i] = snapped;
-      const slider = document.getElementById(`divline-${d.i}`);
-      if (slider) {
-        slider.value = snapped;
-        document.getElementById(`divline-${d.i}-val`).textContent = snapped;
-      }
-      update();
-    });
+    .on('drag', (event, d) => setDivLine(d.i, xScale.invert(event.x)));
 
   // outcome: { valid, elected: Set of labels, tied: Set of labels }
   function drawHistogram(totals, counts1, counts2, candidates, outcome, d1, d2) {
@@ -1181,6 +1183,11 @@
       if (!cfg) throw new Error('Missing "config" key');
       if (!cfg.distributions || cfg.distributions.length < 1) throw new Error('Missing distributions');
       if (!Array.isArray(cfg.candidates) || cfg.candidates.length < 1) throw new Error('Missing candidates');
+      // Checked before anything changes, so a bad file leaves the current settings alone
+      const cfgLines = Math.max(0, (cfg.numParties ?? 0) - 1);
+      if (Array.isArray(cfg.divLines) && cfg.divLines.length === cfgLines && !validDivLines(cfg.divLines)) {
+        throw new Error(`divLines must be half-integers from ${DIV_MIN} to ${DIV_MAX}, increasing, at least 1 apart`);
+      }
 
       const [d1, d2 = {}] = cfg.distributions;
       setSlider('d1-mean', d1.mean ?? 30);
