@@ -1,0 +1,13 @@
+{
+  "name": "proportional-rcv",
+  "private": true,
+  "description": "Demonstrations of STV behavior on a one-dimensional spectrum",
+  "scripts": {
+    "test": "node --test tests/",
+    "serve": "python3 -m http.server 8000 --bind 0.0.0.0"
+  },
+  "devDependencies": {
+    "d3": "^7.9.0",
+    "playwright": "^1.64.1"
+  }
+}
